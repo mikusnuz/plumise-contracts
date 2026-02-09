@@ -64,7 +64,7 @@ contract ChallengeManager is IChallengeManager, Ownable {
      * @param seed Random seed
      * @param duration Challenge duration in seconds
      */
-    function createChallenge(uint256 difficulty, bytes32 seed, uint256 duration) external override {
+    function createChallenge(uint256 difficulty, bytes32 seed, uint256 duration) external payable override {
         require(msg.sender == owner() || isAutomation[msg.sender], "Not authorized");
         require(difficulty >= MIN_DIFFICULTY && difficulty <= MAX_DIFFICULTY, "Invalid difficulty");
         require(duration > 0 && duration <= 7 days, "Invalid duration");
@@ -89,10 +89,10 @@ contract ChallengeManager is IChallengeManager, Ownable {
             expiresAt: block.timestamp + duration,
             solved: false,
             solver: address(0),
-            rewardBonus: 0 // Can be set separately if needed
+            rewardBonus: msg.value
         });
 
-        emit ChallengeCreated(challengeCounter, difficulty, seed, block.timestamp + duration, 0);
+        emit ChallengeCreated(challengeCounter, difficulty, seed, block.timestamp + duration, msg.value);
     }
 
     /**
@@ -119,6 +119,12 @@ contract ChallengeManager is IChallengeManager, Ownable {
 
         // Report to reward pool as task contribution
         rewardPool.reportContribution(msg.sender, 1, 0, 100);
+
+        // Transfer bonus reward if exists
+        if (challenge.rewardBonus > 0) {
+            (bool success,) = msg.sender.call{value: challenge.rewardBonus}("");
+            require(success, "Bonus transfer failed");
+        }
 
         // Adjust difficulty based on solve time
         _adjustDifficulty(solveTime);

@@ -12,12 +12,16 @@ interface IRewardPool {
      * @param uptimeSeconds Total uptime in seconds
      * @param responseScore Response quality score
      * @param lastUpdated Last update timestamp
+     * @param processedTokens Total tokens processed (inference) - Phase 2
+     * @param avgLatencyInv Inverse average latency (higher = faster) - Phase 2
      */
     struct Contribution {
         uint256 taskCount;
         uint256 uptimeSeconds;
         uint256 responseScore;
         uint256 lastUpdated;
+        uint256 processedTokens;    // NEW Phase 2
+        uint256 avgLatencyInv;      // NEW Phase 2
     }
 
     /**
@@ -33,10 +37,18 @@ interface IRewardPool {
      * @param taskCount Number of tasks
      * @param uptimeSeconds Uptime in seconds
      * @param responseScore Response score
+     * @param processedTokens Total tokens processed
+     * @param avgLatencyInv Inverse average latency
      * @param epoch Epoch number
      */
     event ContributionReported(
-        address indexed agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore, uint256 epoch
+        address indexed agent,
+        uint256 taskCount,
+        uint256 uptimeSeconds,
+        uint256 responseScore,
+        uint256 processedTokens,
+        uint256 avgLatencyInv,
+        uint256 epoch
     );
 
     /**
@@ -56,11 +68,12 @@ interface IRewardPool {
 
     /**
      * @notice Emitted when reward formula is updated
+     * @param tokenWeight New token weight
      * @param taskWeight New task weight
      * @param uptimeWeight New uptime weight
-     * @param responseWeight New response weight
+     * @param latencyWeight New latency weight
      */
-    event FormulaUpdated(uint256 taskWeight, uint256 uptimeWeight, uint256 responseWeight);
+    event FormulaUpdated(uint256 tokenWeight, uint256 taskWeight, uint256 uptimeWeight, uint256 latencyWeight);
 
     /**
      * @notice Emitted when oracle is updated
@@ -70,13 +83,32 @@ interface IRewardPool {
     event OracleUpdated(address indexed oldOracle, address indexed newOracle);
 
     /**
-     * @notice Report agent contribution
+     * @notice Report agent contribution (backward compatible - V1)
      * @param agent Agent address
      * @param taskCount Number of tasks completed
      * @param uptimeSeconds Uptime in seconds
      * @param responseScore Response quality score
      */
-    function reportContribution(address agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore) external;
+    function reportContribution(address agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore)
+        external;
+
+    /**
+     * @notice Report agent contribution with Phase 2 metrics (V2)
+     * @param agent Agent address
+     * @param taskCount Number of tasks completed
+     * @param uptimeSeconds Uptime in seconds
+     * @param responseScore Response quality score
+     * @param processedTokens Total tokens processed (inference)
+     * @param avgLatencyInv Inverse average latency (higher = faster)
+     */
+    function reportContribution(
+        address agent,
+        uint256 taskCount,
+        uint256 uptimeSeconds,
+        uint256 responseScore,
+        uint256 processedTokens,
+        uint256 avgLatencyInv
+    ) external;
 
     /**
      * @notice Distribute rewards for an epoch
@@ -104,12 +136,14 @@ interface IRewardPool {
     function getContribution(address agent) external view returns (Contribution memory);
 
     /**
-     * @notice Set reward formula weights
+     * @notice Set reward formula weights (V2 with 4 dimensions)
+     * @param tokenWeight Token weight
      * @param taskWeight Task weight
      * @param uptimeWeight Uptime weight
-     * @param responseWeight Response weight
+     * @param latencyWeight Latency weight
      */
-    function setRewardFormula(uint256 taskWeight, uint256 uptimeWeight, uint256 responseWeight) external;
+    function setRewardFormula(uint256 tokenWeight, uint256 taskWeight, uint256 uptimeWeight, uint256 latencyWeight)
+        external;
 
     /**
      * @notice Set oracle address

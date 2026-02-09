@@ -63,7 +63,7 @@ interface IChallengeManager {
      * @param seed Random seed
      * @param duration Challenge duration in seconds
      */
-    function createChallenge(uint256 difficulty, bytes32 seed, uint256 duration) external;
+    function createChallenge(uint256 difficulty, bytes32 seed, uint256 duration) external payable;
 
     /**
      * @notice Submit a solution to current challenge

@@ -21,10 +21,11 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     /// @notice Oracle address authorized to report contributions
     address public oracle;
 
-    /// @notice Reward formula weights (out of 100)
-    uint256 public taskWeight = 50;
-    uint256 public uptimeWeight = 30;
-    uint256 public responseWeight = 20;
+    /// @notice Reward formula weights V2 (out of 100)
+    uint256 public tokenWeight = 40;
+    uint256 public taskWeight = 25;
+    uint256 public uptimeWeight = 20;
+    uint256 public latencyWeight = 15;
 
     /// @notice Last tracked balance for syncRewards
     uint256 public lastTrackedBalance;
@@ -63,6 +64,8 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     uint256 public constant MAX_TASK_COUNT = 10_000;
     uint256 public constant MAX_UPTIME_SECONDS = 604_800; // 7 days
     uint256 public constant MAX_RESPONSE_SCORE = 1_000_000;
+    uint256 public constant MAX_PROCESSED_TOKENS = 100_000_000; // 100M tokens
+    uint256 public constant MAX_LATENCY_INV = 10_000; // Higher = faster
 
     /// @notice Emergency bypass for AgentRegistry dependency
     bool public emergencyBypassRegistry;
@@ -110,7 +113,7 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Report agent contribution (only oracle)
+     * @notice Report agent contribution V1 (backward compatible)
      * @param agent Agent address
      * @param taskCount Number of tasks completed
      * @param uptimeSeconds Uptime in seconds
@@ -120,10 +123,33 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
         external
         override
     {
+        // Call V2 with zeros for new fields
+        reportContribution(agent, taskCount, uptimeSeconds, responseScore, 0, 0);
+    }
+
+    /**
+     * @notice Report agent contribution V2 with Phase 2 metrics (only oracle)
+     * @param agent Agent address
+     * @param taskCount Number of tasks completed
+     * @param uptimeSeconds Uptime in seconds
+     * @param responseScore Response quality score
+     * @param processedTokens Total tokens processed (inference)
+     * @param avgLatencyInv Inverse average latency (higher = faster)
+     */
+    function reportContribution(
+        address agent,
+        uint256 taskCount,
+        uint256 uptimeSeconds,
+        uint256 responseScore,
+        uint256 processedTokens,
+        uint256 avgLatencyInv
+    ) public override {
         require(msg.sender == oracle, "Only oracle");
         require(taskCount <= MAX_TASK_COUNT, "Task count too high");
         require(uptimeSeconds <= MAX_UPTIME_SECONDS, "Uptime too high");
         require(responseScore <= MAX_RESPONSE_SCORE, "Response score too high");
+        require(processedTokens <= MAX_PROCESSED_TOKENS, "Processed tokens too high");
+        require(avgLatencyInv <= MAX_LATENCY_INV, "Latency inv too high");
 
         if (!emergencyBypassRegistry) {
             require(agentRegistry.isRegistered(agent), "Agent not registered");
@@ -136,6 +162,8 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
         contributions[agent].taskCount += taskCount;
         contributions[agent].uptimeSeconds += uptimeSeconds;
         contributions[agent].responseScore += responseScore;
+        contributions[agent].processedTokens += processedTokens;
+        contributions[agent].avgLatencyInv += avgLatencyInv;
         contributions[agent].lastUpdated = block.timestamp;
 
         // Update epoch contributions
@@ -148,9 +176,11 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
         epochContributions[epoch][agent].taskCount += taskCount;
         epochContributions[epoch][agent].uptimeSeconds += uptimeSeconds;
         epochContributions[epoch][agent].responseScore += responseScore;
+        epochContributions[epoch][agent].processedTokens += processedTokens;
+        epochContributions[epoch][agent].avgLatencyInv += avgLatencyInv;
         epochContributions[epoch][agent].lastUpdated = block.timestamp;
 
-        emit ContributionReported(agent, taskCount, uptimeSeconds, responseScore, epoch);
+        emit ContributionReported(agent, taskCount, uptimeSeconds, responseScore, processedTokens, avgLatencyInv, epoch);
     }
 
     /**
@@ -257,23 +287,25 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Set reward formula weights
+     * @notice Set reward formula weights V2 (4 dimensions)
+     * @param _tokenWeight Token weight
      * @param _taskWeight Task weight
      * @param _uptimeWeight Uptime weight
-     * @param _responseWeight Response weight
+     * @param _latencyWeight Latency weight
      */
-    function setRewardFormula(uint256 _taskWeight, uint256 _uptimeWeight, uint256 _responseWeight)
+    function setRewardFormula(uint256 _tokenWeight, uint256 _taskWeight, uint256 _uptimeWeight, uint256 _latencyWeight)
         external
         override
         onlyOwner
     {
-        require(_taskWeight + _uptimeWeight + _responseWeight == 100, "Weights must sum to 100");
+        require(_tokenWeight + _taskWeight + _uptimeWeight + _latencyWeight == 100, "Weights must sum to 100");
 
+        tokenWeight = _tokenWeight;
         taskWeight = _taskWeight;
         uptimeWeight = _uptimeWeight;
-        responseWeight = _responseWeight;
+        latencyWeight = _latencyWeight;
 
-        emit FormulaUpdated(_taskWeight, _uptimeWeight, _responseWeight);
+        emit FormulaUpdated(_tokenWeight, _taskWeight, _uptimeWeight, _latencyWeight);
     }
 
     /**
@@ -320,13 +352,13 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Calculate agent score based on contributions
+     * @notice Calculate agent score based on contributions (V2 formula)
      * @param contribution Contribution data
      * @return Calculated score
      */
     function calculateScore(Contribution memory contribution) internal view returns (uint256) {
-        return contribution.taskCount * taskWeight + contribution.uptimeSeconds * uptimeWeight
-            + contribution.responseScore * responseWeight;
+        return contribution.processedTokens * tokenWeight + contribution.taskCount * taskWeight
+            + contribution.uptimeSeconds * uptimeWeight + contribution.avgLatencyInv * latencyWeight;
     }
 
     /**

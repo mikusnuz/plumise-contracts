@@ -66,11 +66,17 @@ contract RewardPoolTest is Test {
 
     event RewardReceived(uint256 amount, uint256 epoch);
     event ContributionReported(
-        address indexed agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore, uint256 epoch
+        address indexed agent,
+        uint256 taskCount,
+        uint256 uptimeSeconds,
+        uint256 responseScore,
+        uint256 processedTokens,
+        uint256 avgLatencyInv,
+        uint256 epoch
     );
     event RewardsDistributed(uint256 indexed epoch, uint256 totalReward, uint256 agentCount);
     event RewardClaimed(address indexed agent, uint256 amount);
-    event FormulaUpdated(uint256 taskWeight, uint256 uptimeWeight, uint256 responseWeight);
+    event FormulaUpdated(uint256 tokenWeight, uint256 taskWeight, uint256 uptimeWeight, uint256 latencyWeight);
     event OracleUpdated(address indexed oldOracle, address indexed newOracle);
 
     function setUp() public {
@@ -100,9 +106,10 @@ contract RewardPoolTest is Test {
     function test_Constructor() public view {
         assertEq(address(rewardPool.agentRegistry()), address(registry));
         assertEq(rewardPool.oracle(), oracle);
-        assertEq(rewardPool.taskWeight(), 50);
-        assertEq(rewardPool.uptimeWeight(), 30);
-        assertEq(rewardPool.responseWeight(), 20);
+        assertEq(rewardPool.tokenWeight(), 40);
+        assertEq(rewardPool.taskWeight(), 25);
+        assertEq(rewardPool.uptimeWeight(), 20);
+        assertEq(rewardPool.latencyWeight(), 15);
         assertEq(rewardPool.currentEpoch(), 0);
     }
 
@@ -125,7 +132,7 @@ contract RewardPoolTest is Test {
         uint256 epoch = rewardPool.getCurrentEpoch();
 
         vm.expectEmit(true, true, true, true);
-        emit ContributionReported(agent1, 10, 3600, 95, epoch);
+        emit ContributionReported(agent1, 10, 3600, 95, 0, 0, epoch);
 
         rewardPool.reportContribution(agent1, 10, 3600, 95);
 
@@ -199,10 +206,12 @@ contract RewardPoolTest is Test {
         assertTrue(success);
 
         // Report contributions with different scores
+        // V2 formula: processedTokens * 40 + taskCount * 25 + uptimeSeconds * 20 + avgLatencyInv * 15
+        // Using V1 (backward compat): processedTokens=0, avgLatencyInv=0
         vm.startPrank(oracle);
-        rewardPool.reportContribution(agent1, 10, 3600, 90); // score = 10*50 + 3600*30 + 90*20 = 500 + 108000 + 1800 = 110300
-        rewardPool.reportContribution(agent2, 5, 1800, 95); // score = 5*50 + 1800*30 + 95*20 = 250 + 54000 + 1900 = 56150
-        rewardPool.reportContribution(agent3, 8, 2700, 85); // score = 8*50 + 2700*30 + 85*20 = 400 + 81000 + 1700 = 83100
+        rewardPool.reportContribution(agent1, 10, 3600, 90); // score = 0*40 + 10*25 + 3600*20 + 0*15 = 250 + 72000 = 72250
+        rewardPool.reportContribution(agent2, 5, 1800, 95); // score = 0*40 + 5*25 + 1800*20 + 0*15 = 125 + 36000 = 36125
+        rewardPool.reportContribution(agent3, 8, 2700, 85); // score = 0*40 + 8*25 + 2700*20 + 0*15 = 200 + 54000 = 54200
         vm.stopPrank();
 
         // Move to next epoch
@@ -211,10 +220,10 @@ contract RewardPoolTest is Test {
         // Distribute rewards
         rewardPool.distributeRewards(0);
 
-        // Total score = 110300 + 56150 + 83100 = 249550
-        uint256 totalScore = 249550;
-        uint256 reward1 = (rewardAmount * 110300) / totalScore;
-        uint256 reward2 = (rewardAmount * 56150) / totalScore;
+        // Total score = 72250 + 36125 + 54200 = 162575
+        uint256 totalScore = 162575;
+        uint256 reward1 = (rewardAmount * 72250) / totalScore;
+        uint256 reward2 = (rewardAmount * 36125) / totalScore;
         // reward3 gets the remainder due to dust prevention
         uint256 reward3 = rewardAmount - reward1 - reward2;
 
@@ -316,24 +325,25 @@ contract RewardPoolTest is Test {
 
     function test_SetRewardFormula() public {
         vm.expectEmit(true, true, true, true);
-        emit FormulaUpdated(40, 40, 20);
+        emit FormulaUpdated(30, 30, 25, 15);
 
-        rewardPool.setRewardFormula(40, 40, 20);
+        rewardPool.setRewardFormula(30, 30, 25, 15);
 
-        assertEq(rewardPool.taskWeight(), 40);
-        assertEq(rewardPool.uptimeWeight(), 40);
-        assertEq(rewardPool.responseWeight(), 20);
+        assertEq(rewardPool.tokenWeight(), 30);
+        assertEq(rewardPool.taskWeight(), 30);
+        assertEq(rewardPool.uptimeWeight(), 25);
+        assertEq(rewardPool.latencyWeight(), 15);
     }
 
     function test_SetRewardFormula_InvalidWeights() public {
         vm.expectRevert("Weights must sum to 100");
-        rewardPool.setRewardFormula(50, 30, 30);
+        rewardPool.setRewardFormula(50, 30, 30, 10);
     }
 
     function test_SetRewardFormula_OnlyOwner() public {
         vm.startPrank(agent1);
         vm.expectRevert();
-        rewardPool.setRewardFormula(40, 40, 20);
+        rewardPool.setRewardFormula(30, 30, 25, 15);
         vm.stopPrank();
     }
 
