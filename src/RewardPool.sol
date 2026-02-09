@@ -279,6 +279,15 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     }
 
     /**
+     * @notice Set agent registry address (for post-genesis configuration)
+     * @param _agentRegistry New AgentRegistry address
+     */
+    function setAgentRegistry(address _agentRegistry) external onlyOwner {
+        require(_agentRegistry != address(0), "Invalid registry");
+        agentRegistry = IAgentRegistry(_agentRegistry);
+    }
+
+    /**
      * @notice Set oracle address
      * @param _oracle New oracle address
      */
