@@ -46,7 +46,7 @@ contract FoundationTreasury is IFoundationTreasury, Ownable, ReentrancyGuard {
 
         released += releasable;
 
-        (bool success, ) = owner().call{value: releasable}("");
+        (bool success,) = owner().call{value: releasable}("");
         require(success, "Transfer failed");
 
         emit Released(releasable);

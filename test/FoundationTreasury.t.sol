@@ -117,7 +117,7 @@ contract FoundationTreasuryTest is Test {
 
         vm.deal(other, amount);
         vm.prank(other);
-        (bool success, ) = address(treasury).call{value: amount}("");
+        (bool success,) = address(treasury).call{value: amount}("");
         assertTrue(success);
 
         assertEq(address(treasury).balance, TOTAL_ALLOCATION + amount);

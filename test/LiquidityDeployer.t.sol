@@ -83,7 +83,7 @@ contract LiquidityDeployerTest is Test {
 
         vm.deal(recipient, amount);
         vm.prank(recipient);
-        (bool success, ) = address(deployer).call{value: amount}("");
+        (bool success,) = address(deployer).call{value: amount}("");
         assertTrue(success);
 
         assertEq(deployer.getBalance(), TOTAL_ALLOCATION + amount);

@@ -32,7 +32,7 @@ contract LiquidityDeployer is ILiquidityDeployer, Ownable, ReentrancyGuard {
         require(amount > 0, "Amount must be positive");
         require(address(this).balance >= amount, "Insufficient balance");
 
-        (bool success, ) = to.call{value: amount}("");
+        (bool success,) = to.call{value: amount}("");
         require(success, "Transfer failed");
 
         emit Transfer(to, amount);

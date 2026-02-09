@@ -38,10 +38,7 @@ contract Deploy is Script {
 
         // 3. Deploy ChallengeManager with AgentRegistry and RewardPool addresses
         console.log("\n3. Deploying ChallengeManager...");
-        ChallengeManager challengeManager = new ChallengeManager(
-            address(agentRegistry),
-            address(rewardPool)
-        );
+        ChallengeManager challengeManager = new ChallengeManager(address(agentRegistry), address(rewardPool));
         console.log("ChallengeManager deployed at:", address(challengeManager));
 
         // 4. Set up cross-references

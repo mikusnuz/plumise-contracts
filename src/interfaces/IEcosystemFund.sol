@@ -45,10 +45,7 @@ interface IEcosystemFund {
      * @param recipients Array of recipient addresses
      * @param amounts Array of amounts
      */
-    function transferBatch(
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external;
+    function transferBatch(address[] calldata recipients, uint256[] calldata amounts) external;
 
     /**
      * @notice Enable/disable emergency mode

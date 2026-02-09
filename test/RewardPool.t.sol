@@ -35,12 +35,15 @@ contract MockAgentRegistry is IAgentRegistry {
     function heartbeat() external override {}
     function updateMetadata(string memory) external override {}
     function deregisterAgent() external override {}
+
     function getAgent(address) external view override returns (Agent memory) {
         return Agent(address(0), bytes32(0), "", 0, 0, AgentStatus.INACTIVE, 0);
     }
+
     function getActiveAgents() external view override returns (address[] memory) {
         return new address[](0);
     }
+
     function getActiveAgentCount() external view override returns (uint256) {
         return 0;
     }
@@ -63,11 +66,7 @@ contract RewardPoolTest is Test {
 
     event RewardReceived(uint256 amount, uint256 epoch);
     event ContributionReported(
-        address indexed agent,
-        uint256 taskCount,
-        uint256 uptimeSeconds,
-        uint256 responseScore,
-        uint256 epoch
+        address indexed agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore, uint256 epoch
     );
     event RewardsDistributed(uint256 indexed epoch, uint256 totalReward, uint256 agentCount);
     event RewardClaimed(address indexed agent, uint256 amount);
@@ -114,7 +113,7 @@ contract RewardPoolTest is Test {
         vm.expectEmit(true, true, true, true);
         emit RewardReceived(rewardAmount, epoch);
 
-        (bool success, ) = address(rewardPool).call{value: rewardAmount}("");
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
         assertTrue(success);
 
         assertEq(rewardPool.epochRewards(epoch), rewardAmount);
@@ -172,7 +171,7 @@ contract RewardPoolTest is Test {
     function test_DistributeRewards_SingleAgent() public {
         // Send rewards to pool
         uint256 rewardAmount = 10 ether;
-        (bool success, ) = address(rewardPool).call{value: rewardAmount}("");
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
         assertTrue(success);
 
         // Report contribution
@@ -196,14 +195,14 @@ contract RewardPoolTest is Test {
     function test_DistributeRewards_MultipleAgents() public {
         // Send rewards to pool
         uint256 rewardAmount = 10 ether;
-        (bool success, ) = address(rewardPool).call{value: rewardAmount}("");
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
         assertTrue(success);
 
         // Report contributions with different scores
         vm.startPrank(oracle);
         rewardPool.reportContribution(agent1, 10, 3600, 90); // score = 10*50 + 3600*30 + 90*20 = 500 + 108000 + 1800 = 110300
-        rewardPool.reportContribution(agent2, 5, 1800, 95);  // score = 5*50 + 1800*30 + 95*20 = 250 + 54000 + 1900 = 56150
-        rewardPool.reportContribution(agent3, 8, 2700, 85);  // score = 8*50 + 2700*30 + 85*20 = 400 + 81000 + 1700 = 83100
+        rewardPool.reportContribution(agent2, 5, 1800, 95); // score = 5*50 + 1800*30 + 95*20 = 250 + 54000 + 1900 = 56150
+        rewardPool.reportContribution(agent3, 8, 2700, 85); // score = 8*50 + 2700*30 + 85*20 = 400 + 81000 + 1700 = 83100
         vm.stopPrank();
 
         // Move to next epoch
@@ -230,7 +229,7 @@ contract RewardPoolTest is Test {
     function test_DistributeRewards_NoContributions() public {
         // Send rewards to pool
         uint256 rewardAmount = 10 ether;
-        (bool success, ) = address(rewardPool).call{value: rewardAmount}("");
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
         assertTrue(success);
 
         // Move to next epoch without any contributions
@@ -249,7 +248,7 @@ contract RewardPoolTest is Test {
 
     function test_DistributeRewards_AlreadyDistributed() public {
         // Send rewards and report contribution
-        (bool success, ) = address(rewardPool).call{value: 10 ether}("");
+        (bool success,) = address(rewardPool).call{value: 10 ether}("");
         assertTrue(success);
 
         vm.prank(oracle);
@@ -274,7 +273,7 @@ contract RewardPoolTest is Test {
     function test_ClaimReward() public {
         // Send rewards and report contribution
         uint256 rewardAmount = 10 ether;
-        (bool success, ) = address(rewardPool).call{value: rewardAmount}("");
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
         assertTrue(success);
 
         vm.prank(oracle);
@@ -375,7 +374,7 @@ contract RewardPoolTest is Test {
 
     function test_MultipleEpochs() public {
         // Epoch 0: agent1 contributes
-        (bool success, ) = address(rewardPool).call{value: 5 ether}("");
+        (bool success,) = address(rewardPool).call{value: 5 ether}("");
         assertTrue(success);
 
         vm.prank(oracle);
@@ -385,7 +384,7 @@ contract RewardPoolTest is Test {
         vm.roll(block.number + 1200);
 
         // Epoch 1: agent2 contributes
-        (success, ) = address(rewardPool).call{value: 5 ether}("");
+        (success,) = address(rewardPool).call{value: 5 ether}("");
         assertTrue(success);
 
         vm.prank(oracle);
@@ -445,7 +444,7 @@ contract RewardPoolTest is Test {
 
         // Send rewards
         vm.deal(address(this), rewardAmount);
-        (bool success, ) = address(rewardPool).call{value: rewardAmount}("");
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
         assertTrue(success);
 
         // Report contribution

@@ -22,10 +22,7 @@ contract ChallengeManagerTest is Test {
         // Deploy contracts
         agentRegistry = new AgentRegistry();
         rewardPool = new RewardPool(address(agentRegistry), owner);
-        challengeManager = new ChallengeManager(
-            address(agentRegistry),
-            address(rewardPool)
-        );
+        challengeManager = new ChallengeManager(address(agentRegistry), address(rewardPool));
 
         // Set ChallengeManager as oracle for RewardPool
         rewardPool.setOracle(address(challengeManager));
@@ -388,10 +385,15 @@ contract ChallengeManagerTest is Test {
     // Helper function to find a valid solution (brute force)
     function _findSolution(
         uint256 challengeId,
-        bytes32 /* seed */,
+        bytes32,
+        /* seed */
         address solver,
         uint256 /* difficulty */
-    ) internal view returns (bytes32) {
+    )
+        internal
+        view
+        returns (bytes32)
+    {
         for (uint256 i = 0; i < 1000000; i++) {
             bytes32 attempt = keccak256(abi.encode(i));
             if (challengeManager.verifySolution(challengeId, attempt, solver)) {

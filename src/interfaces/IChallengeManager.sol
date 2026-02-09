@@ -37,11 +37,7 @@ interface IChallengeManager {
      * @param rewardBonus Bonus reward amount
      */
     event ChallengeCreated(
-        uint256 indexed id,
-        uint256 difficulty,
-        bytes32 seed,
-        uint256 expiresAt,
-        uint256 rewardBonus
+        uint256 indexed id, uint256 difficulty, bytes32 seed, uint256 expiresAt, uint256 rewardBonus
     );
 
     /**
@@ -51,12 +47,7 @@ interface IChallengeManager {
      * @param solution Solution hash
      * @param solveTime Time taken to solve (seconds)
      */
-    event ChallengeSolved(
-        uint256 indexed id,
-        address indexed solver,
-        bytes32 solution,
-        uint256 solveTime
-    );
+    event ChallengeSolved(uint256 indexed id, address indexed solver, bytes32 solution, uint256 solveTime);
 
     /**
      * @notice Emitted when difficulty is adjusted
@@ -64,11 +55,7 @@ interface IChallengeManager {
      * @param newDifficulty New difficulty
      * @param reason Reason for adjustment
      */
-    event DifficultyAdjusted(
-        uint256 oldDifficulty,
-        uint256 newDifficulty,
-        string reason
-    );
+    event DifficultyAdjusted(uint256 oldDifficulty, uint256 newDifficulty, string reason);
 
     /**
      * @notice Create a new challenge
@@ -76,11 +63,7 @@ interface IChallengeManager {
      * @param seed Random seed
      * @param duration Challenge duration in seconds
      */
-    function createChallenge(
-        uint256 difficulty,
-        bytes32 seed,
-        uint256 duration
-    ) external;
+    function createChallenge(uint256 difficulty, bytes32 seed, uint256 duration) external;
 
     /**
      * @notice Submit a solution to current challenge
@@ -96,11 +79,7 @@ interface IChallengeManager {
      * @param solver Address to verify for
      * @return true if solution is valid
      */
-    function verifySolution(
-        uint256 challengeId,
-        bytes32 solution,
-        address solver
-    ) external view returns (bool);
+    function verifySolution(uint256 challengeId, bytes32 solution, address solver) external view returns (bool);
 
     /**
      * @notice Get current active challenge
@@ -114,10 +93,7 @@ interface IChallengeManager {
      * @param limit Number of challenges to return
      * @return Array of challenges
      */
-    function getChallengeHistory(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (Challenge[] memory);
+    function getChallengeHistory(uint256 offset, uint256 limit) external view returns (Challenge[] memory);
 
     /**
      * @notice Set target solve time for difficulty adjustment

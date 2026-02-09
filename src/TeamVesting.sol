@@ -53,20 +53,14 @@ contract TeamVesting is ITeamVesting, Ownable, ReentrancyGuard {
      * @param beneficiary Beneficiary address
      * @param allocation Amount allocated to beneficiary
      */
-    function addBeneficiary(
-        address beneficiary,
-        uint256 allocation
-    ) external override onlyOwner {
+    function addBeneficiary(address beneficiary, uint256 allocation) external override onlyOwner {
         require(beneficiaryList.length < MAX_BENEFICIARIES, "Too many beneficiaries");
         require(beneficiary != address(0), "Invalid beneficiary");
         require(allocation > 0, "Allocation must be positive");
         require(!isBeneficiary[beneficiary], "Already a beneficiary");
         require(totalAllocated + allocation <= totalAllocation, "Exceeds total allocation");
 
-        beneficiaries[beneficiary] = Beneficiary({
-            allocation: allocation,
-            released: 0
-        });
+        beneficiaries[beneficiary] = Beneficiary({allocation: allocation, released: 0});
 
         beneficiaryList.push(beneficiary);
         isBeneficiary[beneficiary] = true;
@@ -113,7 +107,7 @@ contract TeamVesting is ITeamVesting, Ownable, ReentrancyGuard {
 
         beneficiaries[beneficiary].released += releasable;
 
-        (bool success, ) = beneficiary.call{value: releasable}("");
+        (bool success,) = beneficiary.call{value: releasable}("");
         require(success, "Transfer failed");
 
         emit Released(beneficiary, releasable);

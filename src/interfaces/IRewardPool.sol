@@ -36,11 +36,7 @@ interface IRewardPool {
      * @param epoch Epoch number
      */
     event ContributionReported(
-        address indexed agent,
-        uint256 taskCount,
-        uint256 uptimeSeconds,
-        uint256 responseScore,
-        uint256 epoch
+        address indexed agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore, uint256 epoch
     );
 
     /**
@@ -80,12 +76,7 @@ interface IRewardPool {
      * @param uptimeSeconds Uptime in seconds
      * @param responseScore Response quality score
      */
-    function reportContribution(
-        address agent,
-        uint256 taskCount,
-        uint256 uptimeSeconds,
-        uint256 responseScore
-    ) external;
+    function reportContribution(address agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore) external;
 
     /**
      * @notice Distribute rewards for an epoch
@@ -118,11 +109,7 @@ interface IRewardPool {
      * @param uptimeWeight Uptime weight
      * @param responseWeight Response weight
      */
-    function setRewardFormula(
-        uint256 taskWeight,
-        uint256 uptimeWeight,
-        uint256 responseWeight
-    ) external;
+    function setRewardFormula(uint256 taskWeight, uint256 uptimeWeight, uint256 responseWeight) external;
 
     /**
      * @notice Set oracle address

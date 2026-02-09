@@ -194,7 +194,7 @@ contract EcosystemFundTest is Test {
 
         vm.deal(recipient1, amount);
         vm.prank(recipient1);
-        (bool success, ) = address(fund).call{value: amount}("");
+        (bool success,) = address(fund).call{value: amount}("");
         assertTrue(success);
 
         assertEq(fund.getBalance(), TOTAL_ALLOCATION + amount);

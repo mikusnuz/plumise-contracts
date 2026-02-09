@@ -206,7 +206,7 @@ contract TeamVestingTest is Test {
 
         vm.deal(beneficiary1, amount);
         vm.prank(beneficiary1);
-        (bool success, ) = address(vesting).call{value: amount}("");
+        (bool success,) = address(vesting).call{value: amount}("");
         assertTrue(success);
 
         assertEq(address(vesting).balance, TOTAL_ALLOCATION + amount);

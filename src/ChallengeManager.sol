@@ -50,10 +50,7 @@ contract ChallengeManager is IChallengeManager, Ownable {
      * @param _agentRegistry Address of AgentRegistry contract
      * @param _rewardPool Address of RewardPool contract
      */
-    constructor(
-        address _agentRegistry,
-        address _rewardPool
-    ) Ownable(msg.sender) {
+    constructor(address _agentRegistry, address _rewardPool) Ownable(msg.sender) {
         require(_agentRegistry != address(0), "Invalid registry");
         require(_rewardPool != address(0), "Invalid reward pool");
 
@@ -67,15 +64,8 @@ contract ChallengeManager is IChallengeManager, Ownable {
      * @param seed Random seed
      * @param duration Challenge duration in seconds
      */
-    function createChallenge(
-        uint256 difficulty,
-        bytes32 seed,
-        uint256 duration
-    ) external override {
-        require(
-            msg.sender == owner() || isAutomation[msg.sender],
-            "Not authorized"
-        );
+    function createChallenge(uint256 difficulty, bytes32 seed, uint256 duration) external override {
+        require(msg.sender == owner() || isAutomation[msg.sender], "Not authorized");
         require(difficulty >= MIN_DIFFICULTY && difficulty <= MAX_DIFFICULTY, "Invalid difficulty");
         require(duration > 0 && duration <= 7 days, "Invalid duration");
 
@@ -102,13 +92,7 @@ contract ChallengeManager is IChallengeManager, Ownable {
             rewardBonus: 0 // Can be set separately if needed
         });
 
-        emit ChallengeCreated(
-            challengeCounter,
-            difficulty,
-            seed,
-            block.timestamp + duration,
-            0
-        );
+        emit ChallengeCreated(challengeCounter, difficulty, seed, block.timestamp + duration, 0);
     }
 
     /**
@@ -116,10 +100,7 @@ contract ChallengeManager is IChallengeManager, Ownable {
      * @param challengeId Challenge ID
      * @param solution Solution hash
      */
-    function submitSolution(
-        uint256 challengeId,
-        bytes32 solution
-    ) external override {
+    function submitSolution(uint256 challengeId, bytes32 solution) external override {
         require(agentRegistry.isActive(msg.sender), "Agent not active");
         require(challengeId == currentChallengeId, "Not current challenge");
 
@@ -128,10 +109,7 @@ contract ChallengeManager is IChallengeManager, Ownable {
         require(block.timestamp < challenge.expiresAt, "Challenge expired");
 
         // Verify solution
-        require(
-            verifySolution(challengeId, solution, msg.sender),
-            "Invalid solution"
-        );
+        require(verifySolution(challengeId, solution, msg.sender), "Invalid solution");
 
         // Mark as solved
         challenge.solved = true;
@@ -155,19 +133,11 @@ contract ChallengeManager is IChallengeManager, Ownable {
      * @param solver Address to verify for
      * @return true if solution is valid
      */
-    function verifySolution(
-        uint256 challengeId,
-        bytes32 solution,
-        address solver
-    ) public view override returns (bool) {
+    function verifySolution(uint256 challengeId, bytes32 solution, address solver) public view override returns (bool) {
         Challenge memory challenge = challenges[challengeId];
 
         // Compute hash: keccak256(seed, solution, solver)
-        bytes32 hash = keccak256(abi.encodePacked(
-            challenge.seed,
-            solution,
-            solver
-        ));
+        bytes32 hash = keccak256(abi.encodePacked(challenge.seed, solution, solver));
 
         // Check if hash has required number of leading zero bits
         return _hasLeadingZeroBits(hash, challenge.difficulty);
@@ -188,10 +158,7 @@ contract ChallengeManager is IChallengeManager, Ownable {
      * @param limit Number of challenges to return
      * @return Array of challenges
      */
-    function getChallengeHistory(
-        uint256 offset,
-        uint256 limit
-    ) external view override returns (Challenge[] memory) {
+    function getChallengeHistory(uint256 offset, uint256 limit) external view override returns (Challenge[] memory) {
         require(limit > 0 && limit <= 100, "Invalid limit");
 
         uint256 total = challengeCounter;

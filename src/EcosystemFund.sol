@@ -53,8 +53,7 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
             uint256 maxAmount = (totalAllocation * RATE_LIMIT_PERCENT) / 100;
             require(amount <= maxAmount, "Exceeds rate limit");
             require(
-                lastTransferTimestamp == 0 ||
-                block.timestamp >= lastTransferTimestamp + TIMELOCK_DURATION,
+                lastTransferTimestamp == 0 || block.timestamp >= lastTransferTimestamp + TIMELOCK_DURATION,
                 "Timelock active"
             );
         } else {
@@ -65,7 +64,7 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
 
         lastTransferTimestamp = block.timestamp;
 
-        (bool success, ) = to.call{value: amount}("");
+        (bool success,) = to.call{value: amount}("");
         require(success, "Transfer failed");
 
         emit Transfer(to, amount);
@@ -76,10 +75,12 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
      * @param recipients Array of recipient addresses
      * @param amounts Array of amounts
      */
-    function transferBatch(
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external override onlyOwner nonReentrant {
+    function transferBatch(address[] calldata recipients, uint256[] calldata amounts)
+        external
+        override
+        onlyOwner
+        nonReentrant
+    {
         require(recipients.length == amounts.length, "Length mismatch");
         require(recipients.length > 0, "Empty arrays");
 
@@ -94,8 +95,7 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
             uint256 maxAmount = (totalAllocation * RATE_LIMIT_PERCENT) / 100;
             require(totalAmount <= maxAmount, "Exceeds rate limit");
             require(
-                lastTransferTimestamp == 0 ||
-                block.timestamp >= lastTransferTimestamp + TIMELOCK_DURATION,
+                lastTransferTimestamp == 0 || block.timestamp >= lastTransferTimestamp + TIMELOCK_DURATION,
                 "Timelock active"
             );
         } else {
@@ -107,7 +107,7 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
             require(recipients[i] != address(0), "Invalid recipient");
             require(amounts[i] > 0, "Amount must be positive");
 
-            (bool success, ) = recipients[i].call{value: amounts[i]}("");
+            (bool success,) = recipients[i].call{value: amounts[i]}("");
             require(success, "Transfer failed");
 
             emit Transfer(recipients[i], amounts[i]);

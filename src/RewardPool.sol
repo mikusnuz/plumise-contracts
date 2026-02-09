@@ -116,12 +116,10 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @param uptimeSeconds Uptime in seconds
      * @param responseScore Response quality score
      */
-    function reportContribution(
-        address agent,
-        uint256 taskCount,
-        uint256 uptimeSeconds,
-        uint256 responseScore
-    ) external override {
+    function reportContribution(address agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore)
+        external
+        override
+    {
         require(msg.sender == oracle, "Only oracle");
         require(taskCount <= MAX_TASK_COUNT, "Task count too high");
         require(uptimeSeconds <= MAX_UPTIME_SECONDS, "Uptime too high");
@@ -234,7 +232,7 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
         pendingRewards[msg.sender] = 0;
         lastTrackedBalance = address(this).balance - reward;
 
-        (bool success, ) = msg.sender.call{value: reward}("");
+        (bool success,) = msg.sender.call{value: reward}("");
         require(success, "Transfer failed");
 
         emit RewardClaimed(msg.sender, reward);
@@ -264,13 +262,13 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @param _uptimeWeight Uptime weight
      * @param _responseWeight Response weight
      */
-    function setRewardFormula(
-        uint256 _taskWeight,
-        uint256 _uptimeWeight,
-        uint256 _responseWeight
-    ) external override onlyOwner {
+    function setRewardFormula(uint256 _taskWeight, uint256 _uptimeWeight, uint256 _responseWeight)
+        external
+        override
+        onlyOwner
+    {
         require(_taskWeight + _uptimeWeight + _responseWeight == 100, "Weights must sum to 100");
-        
+
         taskWeight = _taskWeight;
         uptimeWeight = _uptimeWeight;
         responseWeight = _responseWeight;
@@ -327,10 +325,8 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @return Calculated score
      */
     function calculateScore(Contribution memory contribution) internal view returns (uint256) {
-        return 
-            contribution.taskCount * taskWeight +
-            contribution.uptimeSeconds * uptimeWeight +
-            contribution.responseScore * responseWeight;
+        return contribution.taskCount * taskWeight + contribution.uptimeSeconds * uptimeWeight
+            + contribution.responseScore * responseWeight;
     }
 
     /**
