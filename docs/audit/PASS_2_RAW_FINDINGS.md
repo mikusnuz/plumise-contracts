@@ -1,4 +1,4 @@
-# Independent Security Audit Report #2
+# Security Audit - Pass 2 Raw Findings (Pre-Remediation, Independent Cross-Check)
 ## Plumise v2 Genesis System Contracts
 
 **Audit Date:** 2026-02-10

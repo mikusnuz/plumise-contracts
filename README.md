@@ -1,206 +1,210 @@
 # Plumise Contracts
 
-Plumise AI-native blockchain의 스마트 컨트랙트 모음입니다.
+**English** | [한국어](README.ko.md)
 
-## 개요
+Smart contract suite for the Plumise AI-native blockchain.
 
-Plumise는 AI 에이전트들이 블록체인 상에서 활동할 수 있는 플랫폼입니다. 이 저장소는 에이전트 등록, 보상 분배 등의 핵심 컨트랙트를 포함합니다.
+## Overview
 
-## 컨트랙트
+Plumise is a platform where AI agents operate on-chain. This repository contains the core smart contracts for agent registration, reward distribution, tokenomics vesting, and governance.
+
+## Contracts
 
 ### 1. AgentRegistry
 
-AI 에이전트를 등록하고 관리하는 레지스트리 컨트랙트입니다.
+Registry contract for registering and managing AI agents.
 
-**주요 기능:**
-- `registerAgent(bytes32 nodeId, string metadata)` - 새로운 에이전트 등록
-- `heartbeat()` - 에이전트 활성 상태 유지 (5분마다 필요)
-- `updateMetadata(string metadata)` - 에이전트 메타데이터 업데이트
-- `deregisterAgent()` - 에이전트 등록 해제
-- `getAgent(address)` - 에이전트 정보 조회
-- `getActiveAgents()` - 활성 에이전트 목록 조회
-- `isActive(address)` - 에이전트 활성 상태 확인 (300초 이내 heartbeat 필요)
-- `isRegistered(address)` - 에이전트 등록 여부 확인
-- `slashAgent(address)` - 에이전트 슬래싱 (관리자 전용)
+**Key Functions:**
+- `registerAgent(bytes32 nodeId, string metadata)` - Register a new agent
+- `heartbeat()` - Maintain agent liveness (required every 5 minutes)
+- `updateMetadata(string metadata)` - Update agent metadata
+- `deregisterAgent()` - Deregister an agent
+- `getAgent(address)` - Query agent information
+- `getActiveAgents()` - List active agents
+- `isActive(address)` - Check agent liveness (heartbeat within 300 seconds)
+- `isRegistered(address)` - Check agent registration status
+- `slashAgent(address)` - Slash an agent (admin only)
 
-**에이전트 상태:**
-- `ACTIVE` - 활성 상태
-- `INACTIVE` - 비활성 상태 (heartbeat timeout)
-- `SLASHED` - 슬래싱됨
+**Agent States:**
+- `ACTIVE` - Active
+- `INACTIVE` - Inactive (heartbeat timeout)
+- `SLASHED` - Slashed
 
 ### 2. RewardPool
 
-에이전트들에게 블록 보상을 분배하는 풀 컨트랙트입니다.
+Pool contract that distributes block rewards to agents.
 
-**주요 기능:**
-- `syncRewards()` - 블록 보상 동기화 (state.AddBalance 반영)
-- `reportContribution(address, taskCount, uptimeSeconds, responseScore)` - 기여도 보고 (Oracle)
-- `distributeRewards(uint256 epoch)` - Epoch별 보상 분배
-- `claimReward()` - 누적 보상 청구
-- `setRewardFormula(taskWeight, uptimeWeight, responseWeight)` - 보상 공식 조정
+**Key Functions:**
+- `syncRewards()` - Sync block rewards (reflects `state.AddBalance`)
+- `reportContribution(address, taskCount, uptimeSeconds, responseScore)` - Report contribution metrics (Oracle)
+- `distributeRewards(uint256 epoch)` - Distribute rewards per epoch
+- `claimReward()` - Claim accumulated rewards
+- `setRewardFormula(taskWeight, uptimeWeight, responseWeight)` - Adjust reward formula weights
 
-**보상 메커니즘:**
-- Epoch: 1200 블록 (약 1시간, 3초 블록 기준)
-- 기여도 계산: `taskCount * taskWeight + uptimeSeconds * uptimeWeight + responseScore * responseWeight`
-- 블록 보상은 Geth의 `state.AddBalance()`로 추가 → `syncRewards()` 호출로 추적
+**Reward Mechanism:**
+- Epoch: 1,200 blocks (approximately 1 hour at 3-second block time)
+- Contribution score: `taskCount * taskWeight + uptimeSeconds * uptimeWeight + responseScore * responseWeight`
+- Block rewards are added via Geth's `state.AddBalance()` and tracked through `syncRewards()`
 
 ### 3. FoundationTreasury (0x1001)
 
-재단 자금을 관리하며 6개월 cliff + 36개월 linear vesting을 적용합니다.
+Manages foundation funds with a 6-month cliff followed by 36-month linear vesting.
 
-**주요 기능:**
-- `release()` - 베스팅된 토큰 인출 (Owner)
-- `vestedAmount()` - 현재까지 베스팅된 총량
-- `releasableAmount()` - 현재 인출 가능한 금액
+**Key Functions:**
+- `release()` - Withdraw vested tokens (Owner)
+- `vestedAmount()` - Total amount vested to date
+- `releasableAmount()` - Currently withdrawable amount
 
-**베스팅 스케줄:**
+**Vesting Schedule:**
 - Total: 47,712,000 PLM
-- Cliff: 6개월 (180일)
-- Vesting: 36개월 (1080일)
-- Total duration: 42개월
+- Cliff: 6 months (180 days)
+- Vesting: 36 months (1,080 days)
+- Total duration: 42 months
 
 ### 4. EcosystemFund (0x1002)
 
-생태계 개발 자금을 관리하며 governance 통제를 적용합니다.
+Manages ecosystem development funds with governance controls.
 
-**주요 기능:**
-- `transfer(address, uint256)` - 자금 전송 (Owner)
-- `transferBatch(address[], uint256[])` - 일괄 전송
-- `setEmergencyMode(bool)` - 긴급 모드 활성화
+**Key Functions:**
+- `transfer(address, uint256)` - Transfer funds (Owner)
+- `transferBatch(address[], uint256[])` - Batch transfer
+- `setEmergencyMode(bool)` - Enable emergency mode
 
-**거버넌스 통제:**
-- Total: 55,664,000 PLM (즉시 사용 가능)
-- Rate limit: 최대 5% per transaction
-- Timelock: 24시간 간격
-- Emergency mode: 모든 제약 해제
+**Governance Controls:**
+- Total: 55,664,000 PLM (immediately available)
+- Rate limit: Maximum 5% per transaction
+- Timelock: 24-hour interval
+- Emergency mode: Bypasses all restrictions
 
 ### 5. TeamVesting (0x1003)
 
-팀 토큰 베스팅을 관리하며 여러 beneficiary를 지원합니다.
+Manages team token vesting with support for multiple beneficiaries.
 
-**주요 기능:**
-- `addBeneficiary(address, uint256)` - Beneficiary 추가 (Owner)
-- `removeBeneficiary(address)` - Beneficiary 제거 (Owner)
-- `release(address)` - Beneficiary에게 베스팅된 토큰 전송 (Anyone)
-- `vestedAmount(address)` - Beneficiary별 베스팅량
-- `releasableAmount(address)` - Beneficiary별 인출 가능량
+**Key Functions:**
+- `addBeneficiary(address, uint256)` - Add a beneficiary (Owner)
+- `removeBeneficiary(address)` - Remove a beneficiary (Owner)
+- `release(address)` - Release vested tokens to a beneficiary (Anyone)
+- `vestedAmount(address)` - Vested amount per beneficiary
+- `releasableAmount(address)` - Withdrawable amount per beneficiary
 
-**베스팅 스케줄:**
+**Vesting Schedule:**
 - Total: 23,856,000 PLM
-- Cliff: 12개월 (365일)
-- Vesting: 36개월 (1095일)
-- Total duration: 48개월
+- Cliff: 12 months (365 days)
+- Vesting: 36 months (1,095 days)
+- Total duration: 48 months
 
 ### 6. LiquidityDeployer (0x1004)
 
-DEX 유동성 공급을 위한 자금을 관리합니다.
+Manages funds for DEX liquidity provisioning.
 
-**주요 기능:**
-- `transfer(address, uint256)` - 자금 전송 (Owner)
-- `wrapAndAddLiquidity(router, token, plmAmount, tokenAmount)` - WPLM 래핑 + 유동성 추가
+**Key Functions:**
+- `transfer(address, uint256)` - Transfer funds (Owner)
+- `wrapAndAddLiquidity(router, token, plmAmount, tokenAmount)` - Wrap PLM and add liquidity
 
-**특징:**
-- Total: 31,808,000 PLM (즉시 사용 가능)
-- 베스팅 없음
-- DEX 유동성 부트스트래핑 전용
+**Characteristics:**
+- Total: 31,808,000 PLM (immediately available)
+- No vesting
+- Dedicated to DEX liquidity bootstrapping
 
 ### 7. ChallengeManager
 
-AI 에이전트 챌린지 시스템을 관리합니다.
+Manages the AI agent challenge system.
 
-## 기술 스택
+## Tech Stack
 
 - Solidity 0.8.20
 - Foundry (forge, cast, anvil)
 - OpenZeppelin Contracts v5.5.0
 
-## 설치
+## Installation
 
 ```bash
-# Foundry 설치 (https://book.getfoundry.sh/getting-started/installation)
+# Install Foundry (https://book.getfoundry.sh/getting-started/installation)
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 
-# 프로젝트 의존성 설치
+# Install project dependencies
 forge install
 ```
 
-## 빌드
+## Build
 
 ```bash
 forge build
 ```
 
-## 테스트
+## Test
 
 ```bash
-# 모든 테스트 실행
+# Run all tests
 forge test
 
-# AgentRegistry 테스트만 실행
+# Run only AgentRegistry tests
 forge test --match-contract AgentRegistryTest
 
-# 상세 로그와 함께 테스트
+# Run tests with verbose logging
 forge test -vvv
 
-# Gas 리포트
+# Gas report
 forge test --gas-report
 ```
 
-## 배포
+## Deployment
 
 ```bash
-# .env 파일 설정
+# Configure .env file
 cp .env.example .env
-# PRIVATE_KEY, RPC_URL 등 설정
+# Set PRIVATE_KEY, RPC_URL, etc.
 
-# Plumise 메인넷에 배포
+# Deploy to Plumise mainnet
 forge script script/DeployAgentRegistry.s.sol:DeployAgentRegistry \
   --rpc-url https://node-1.plm.plumbug.studio/rpc \
   --broadcast \
   --verify
 ```
 
-## 프로젝트 구조
+## Project Structure
 
 ```
 plumise-contracts/
-├── src/
-│   ├── AgentRegistry.sol           # 에이전트 레지스트리
-│   ├── RewardPool.sol              # 보상 풀
-│   ├── ChallengeManager.sol        # 챌린지 관리자
-│   ├── FoundationTreasury.sol      # 재단 자금 (베스팅)
-│   ├── EcosystemFund.sol           # 생태계 자금 (거버넌스)
-│   ├── TeamVesting.sol             # 팀 베스팅
-│   ├── LiquidityDeployer.sol       # 유동성 배포
+├── src/                          # Smart contracts
+│   ├── AgentRegistry.sol         # Agent registry
+│   ├── RewardPool.sol            # Block reward pool
+│   ├── ChallengeManager.sol      # Challenge manager
+│   ├── FoundationTreasury.sol    # Foundation treasury (vesting)
+│   ├── EcosystemFund.sol         # Ecosystem fund (governance)
+│   ├── TeamVesting.sol           # Team vesting
+│   ├── LiquidityDeployer.sol     # Liquidity deployer
 │   └── interfaces/
-│       ├── IAgentRegistry.sol
-│       ├── IRewardPool.sol
-│       ├── IChallengeManager.sol
-│       ├── IFoundationTreasury.sol
-│       ├── IEcosystemFund.sol
-│       ├── ITeamVesting.sol
-│       └── ILiquidityDeployer.sol
-├── test/
-│   ├── AgentRegistry.t.sol         # AgentRegistry 테스트
-│   ├── RewardPool.t.sol            # RewardPool 테스트
-│   ├── ChallengeManager.t.sol      # ChallengeManager 테스트
-│   ├── FoundationTreasury.t.sol    # FoundationTreasury 테스트
-│   ├── EcosystemFund.t.sol         # EcosystemFund 테스트
-│   ├── TeamVesting.t.sol           # TeamVesting 테스트
-│   └── LiquidityDeployer.t.sol     # LiquidityDeployer 테스트
-├── script/                         # 배포 스크립트
-├── lib/                            # 외부 라이브러리
-├── STORAGE_LAYOUT.md               # Genesis 스토리지 레이아웃
-└── foundry.toml                    # Foundry 설정
+├── test/                         # Test files
+├── script/                       # Deployment scripts
+├── docs/                         # Documentation
+│   ├── audit/                    # Security audit reports
+│   │   ├── FINAL_REPORT.md       # Final comprehensive audit (EN)
+│   │   ├── FINAL_REPORT.ko.md    # Final comprehensive audit (KO)
+│   │   ├── PASS_1_RAW_FINDINGS.md # Pass 1 raw findings
+│   │   └── PASS_2_RAW_FINDINGS.md # Pass 2 raw findings
+│   ├── TOKENOMICS_VERIFICATION.md    # Tokenomics math verification (EN)
+│   ├── TOKENOMICS_VERIFICATION.ko.md # Tokenomics math verification (KO)
+│   └── GENESIS_STORAGE_LAYOUT.md     # Genesis storage slot layout
+├── lib/                          # External libraries
+└── foundry.toml                  # Foundry config
 ```
 
-## Genesis 배포
+## Documentation
 
-Plumise v2 체인의 genesis에 시스템 컨트랙트를 임베딩하는 방법:
+Detailed documentation is available in the `docs/` directory:
+
+- **Security Audit** (`docs/audit/`) -- Comprehensive 2-pass independent security audit covering all seven contracts. All findings have been remediated. Includes the final consolidated report and raw findings from each pass.
+- **Tokenomics Verification** (`docs/TOKENOMICS_VERIFICATION.md`) -- Mathematical proof that the token supply, vesting schedules, and distribution allocations are correctly implemented in the smart contracts.
+- **Genesis Storage Layout** (`docs/GENESIS_STORAGE_LAYOUT.md`) -- Technical reference for genesis block storage slot initialization, detailing how each contract's state variables are mapped to storage slots for direct embedding in the genesis block.
+
+## Genesis Deployment
+
+To embed system contracts in the Plumise v2 chain genesis:
 
 ```bash
-# Runtime bytecode 추출
+# Extract runtime bytecode
 forge inspect RewardPool deployedBytecode > RewardPool.runtime.hex
 forge inspect FoundationTreasury deployedBytecode > FoundationTreasury.runtime.hex
 forge inspect EcosystemFund deployedBytecode > EcosystemFund.runtime.hex
@@ -208,21 +212,21 @@ forge inspect TeamVesting deployedBytecode > TeamVesting.runtime.hex
 forge inspect LiquidityDeployer deployedBytecode > LiquidityDeployer.runtime.hex
 ```
 
-스토리지 레이아웃 및 초기값은 `STORAGE_LAYOUT.md` 참조.
+Refer to `docs/GENESIS_STORAGE_LAYOUT.md` for storage layout and initial values.
 
-**중요:**
-- Genesis 배포 시 constructor가 실행되지 않음
-- 모든 초기 상태는 storage slots로 직접 설정
-- immutable 변수 사용 불가 (일반 state variable로 변경됨)
-- RewardPool의 `syncRewards()` 함수로 블록 보상 추적
+**Important:**
+- Constructors are not executed during genesis deployment
+- All initial state must be set directly via storage slots
+- Immutable variables cannot be used (converted to regular state variables)
+- Block rewards are tracked through the RewardPool's `syncRewards()` function
 
-## 보안
+## Security
 
-- 모든 컨트랙트는 OpenZeppelin의 검증된 라이브러리를 사용합니다
-- Ownable 패턴으로 관리자 권한 제어
-- ReentrancyGuard로 재진입 공격 방지
-- 포괄적인 테스트 커버리지
+- All contracts use audited OpenZeppelin libraries
+- Admin privileges controlled via the Ownable pattern
+- Reentrancy protection with ReentrancyGuard
+- Comprehensive test coverage
 
-## 라이선스
+## License
 
 MIT

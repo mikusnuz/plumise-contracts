@@ -1,4 +1,6 @@
-# Plumise v2 Genesis Contracts Security Audit Report
+**English** | [한국어](FINAL_REPORT.ko.md)
+
+# Plumise v2 Genesis Contracts - Security Audit Report
 
 ---
 

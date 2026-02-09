@@ -1,4 +1,5 @@
-# Security Audit Report #1 - Plumise v2 Genesis System Contracts
+# Security Audit - Pass 1 Raw Findings (Pre-Remediation)
+## Plumise v2 Genesis System Contracts
 
 **Auditor**: Genesis System Contracts Security Team
 **Date**: 2026-02-10

@@ -1,3 +1,5 @@
+[English](TOKENOMICS_VERIFICATION.md) | **한국어**
+
 # Plumise v2 Tokenomics - Mathematical Verification Report
 
 **검증일**: 2026-02-10
