@@ -23,6 +23,9 @@ contract TeamVesting is ITeamVesting, Ownable, ReentrancyGuard {
     /// @notice Vesting duration (36 months = 1095 days)
     uint256 public constant VESTING_DURATION = 1095 days;
 
+    /// @notice Maximum number of beneficiaries
+    uint256 public constant MAX_BENEFICIARIES = 50;
+
     /// @notice Beneficiary data
     mapping(address => Beneficiary) public beneficiaries;
 
@@ -54,6 +57,7 @@ contract TeamVesting is ITeamVesting, Ownable, ReentrancyGuard {
         address beneficiary,
         uint256 allocation
     ) external override onlyOwner {
+        require(beneficiaryList.length < MAX_BENEFICIARIES, "Too many beneficiaries");
         require(beneficiary != address(0), "Invalid beneficiary");
         require(allocation > 0, "Allocation must be positive");
         require(!isBeneficiary[beneficiary], "Already a beneficiary");

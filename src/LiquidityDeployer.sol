@@ -39,34 +39,6 @@ contract LiquidityDeployer is ILiquidityDeployer, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Wrap PLM and add liquidity to DEX
-     * @param router Router address
-     * @param token Token address
-     * @param plmAmount Amount of PLM to use
-     * @param tokenAmount Amount of tokens to use
-     */
-    function wrapAndAddLiquidity(
-        address router,
-        address token,
-        uint256 plmAmount,
-        uint256 tokenAmount
-    ) external override onlyOwner nonReentrant {
-        require(router != address(0), "Invalid router");
-        require(token != address(0), "Invalid token");
-        require(plmAmount > 0, "PLM amount must be positive");
-        require(tokenAmount > 0, "Token amount must be positive");
-        require(address(this).balance >= plmAmount, "Insufficient PLM balance");
-
-        // This is a simplified version
-        // In production, you would:
-        // 1. Wrap PLM to WPLM
-        // 2. Approve WPLM and token to router
-        // 3. Call router.addLiquidity()
-        // For now, just emit event as placeholder
-        emit LiquidityAdded(router, token, plmAmount, tokenAmount);
-    }
-
-    /**
      * @notice Get remaining balance
      * @return Current balance
      */

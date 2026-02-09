@@ -20,6 +20,9 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
     /// @notice Timelock: minimum 24 hours between transfers
     uint256 public constant TIMELOCK_DURATION = 24 hours;
 
+    /// @notice Emergency rate limit: max 20% per transaction
+    uint256 public constant EMERGENCY_RATE_LIMIT_PERCENT = 20;
+
     /// @notice Last transfer timestamp
     uint256 public lastTransferTimestamp;
 
@@ -47,16 +50,17 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
         require(address(this).balance >= amount, "Insufficient balance");
 
         if (!emergencyMode) {
-            // Apply rate limit
             uint256 maxAmount = (totalAllocation * RATE_LIMIT_PERCENT) / 100;
             require(amount <= maxAmount, "Exceeds rate limit");
-
-            // Apply timelock
             require(
                 lastTransferTimestamp == 0 ||
                 block.timestamp >= lastTransferTimestamp + TIMELOCK_DURATION,
                 "Timelock active"
             );
+        } else {
+            // Emergency: higher rate limit, no timelock
+            uint256 emergencyMax = (totalAllocation * EMERGENCY_RATE_LIMIT_PERCENT) / 100;
+            require(amount <= emergencyMax, "Exceeds emergency rate limit");
         }
 
         lastTransferTimestamp = block.timestamp;
@@ -87,19 +91,17 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
         require(address(this).balance >= totalAmount, "Insufficient balance");
 
         if (!emergencyMode) {
-            // Apply rate limit to total
             uint256 maxAmount = (totalAllocation * RATE_LIMIT_PERCENT) / 100;
             require(totalAmount <= maxAmount, "Exceeds rate limit");
-
-            // Apply timelock
             require(
                 lastTransferTimestamp == 0 ||
                 block.timestamp >= lastTransferTimestamp + TIMELOCK_DURATION,
                 "Timelock active"
             );
+        } else {
+            uint256 emergencyMax = (totalAllocation * EMERGENCY_RATE_LIMIT_PERCENT) / 100;
+            require(totalAmount <= emergencyMax, "Exceeds emergency rate limit");
         }
-
-        lastTransferTimestamp = block.timestamp;
 
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid recipient");
@@ -111,6 +113,7 @@ contract EcosystemFund is IEcosystemFund, Ownable, ReentrancyGuard {
             emit Transfer(recipients[i], amounts[i]);
         }
 
+        lastTransferTimestamp = block.timestamp;
         emit BatchTransfer(recipients.length, totalAmount);
     }
 

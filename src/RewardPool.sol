@@ -56,6 +56,17 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     /// @notice Block number when contract was deployed (not immutable for genesis compatibility)
     uint256 public deployBlock;
 
+    /// @notice Maximum agents per epoch to prevent gas DOS
+    uint256 public constant MAX_EPOCH_AGENTS = 200;
+
+    /// @notice Input validation bounds
+    uint256 public constant MAX_TASK_COUNT = 10_000;
+    uint256 public constant MAX_UPTIME_SECONDS = 604_800; // 7 days
+    uint256 public constant MAX_RESPONSE_SCORE = 1_000_000;
+
+    /// @notice Emergency bypass for AgentRegistry dependency
+    bool public emergencyBypassRegistry;
+
     /**
      * @notice Constructor
      * @param _agentRegistry Address of AgentRegistry contract
@@ -88,14 +99,13 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      */
     function syncRewards() external {
         uint256 currentBalance = address(this).balance;
-        require(currentBalance > lastTrackedBalance, "No new rewards");
-
+        if (currentBalance <= lastTrackedBalance) {
+            return; // No new rewards, exit gracefully
+        }
         uint256 newRewards = currentBalance - lastTrackedBalance;
         uint256 epoch = getCurrentEpoch();
-
         epochRewards[epoch] += newRewards;
         lastTrackedBalance = currentBalance;
-
         emit RewardReceived(newRewards, epoch);
     }
 
@@ -113,8 +123,14 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
         uint256 responseScore
     ) external override {
         require(msg.sender == oracle, "Only oracle");
-        require(agentRegistry.isRegistered(agent), "Agent not registered");
-        require(agentRegistry.isActive(agent), "Agent not active");
+        require(taskCount <= MAX_TASK_COUNT, "Task count too high");
+        require(uptimeSeconds <= MAX_UPTIME_SECONDS, "Uptime too high");
+        require(responseScore <= MAX_RESPONSE_SCORE, "Response score too high");
+
+        if (!emergencyBypassRegistry) {
+            require(agentRegistry.isRegistered(agent), "Agent not registered");
+            require(agentRegistry.isActive(agent), "Agent not active");
+        }
 
         uint256 epoch = getCurrentEpoch();
 
@@ -126,6 +142,7 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
 
         // Update epoch contributions
         if (!epochAgentExists[epoch][agent]) {
+            require(epochAgents[epoch].length < MAX_EPOCH_AGENTS, "Max agents reached");
             epochAgents[epoch].push(agent);
             epochAgentExists[epoch][agent] = true;
         }
@@ -173,14 +190,31 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
             return;
         }
 
-        // Distribute rewards proportionally
+        // Distribute rewards proportionally with dust prevention
+        uint256 totalDistributed = 0;
+        uint256 lastScoringIndex = type(uint256).max;
+
+        // Find last scoring agent index
+        for (uint256 i = 0; i < agentCount; i++) {
+            uint256 score = calculateScore(epochContributions[epoch][agents[i]]);
+            if (score > 0) {
+                lastScoringIndex = i;
+            }
+        }
+
         for (uint256 i = 0; i < agentCount; i++) {
             address agent = agents[i];
             uint256 score = calculateScore(epochContributions[epoch][agent]);
-            
+
             if (score > 0) {
-                uint256 reward = (totalReward * score) / totalScore;
+                uint256 reward;
+                if (i == lastScoringIndex) {
+                    reward = totalReward - totalDistributed;
+                } else {
+                    reward = (totalReward * score) / totalScore;
+                }
                 pendingRewards[agent] += reward;
+                totalDistributed += reward;
             }
         }
 
@@ -198,12 +232,11 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
         require(reward > 0, "No rewards");
 
         pendingRewards[msg.sender] = 0;
+        lastTrackedBalance = address(this).balance - reward;
 
-        // Update tracked balance after transfer
         (bool success, ) = msg.sender.call{value: reward}("");
         require(success, "Transfer failed");
 
-        lastTrackedBalance = address(this).balance;
         emit RewardClaimed(msg.sender, reward);
     }
 
@@ -251,11 +284,23 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      */
     function setOracle(address _oracle) external override onlyOwner {
         require(_oracle != address(0), "Invalid oracle");
-        
+
         address oldOracle = oracle;
         oracle = _oracle;
 
         emit OracleUpdated(oldOracle, _oracle);
+    }
+
+    /// @notice Emitted when emergency bypass is changed
+    event EmergencyBypassRegistryChanged(bool enabled);
+
+    /**
+     * @notice Set emergency bypass for AgentRegistry
+     * @param enabled Emergency bypass status
+     */
+    function setEmergencyBypassRegistry(bool enabled) external onlyOwner {
+        emergencyBypassRegistry = enabled;
+        emit EmergencyBypassRegistryChanged(enabled);
     }
 
     /**
@@ -263,6 +308,7 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @return Current epoch
      */
     function getCurrentEpoch() public view returns (uint256) {
+        if (block.number <= deployBlock) return 0;
         return (block.number - deployBlock) / BLOCKS_PER_EPOCH;
     }
 

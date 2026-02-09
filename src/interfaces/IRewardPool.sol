@@ -9,14 +9,12 @@ interface IRewardPool {
     /**
      * @notice Contribution data for an agent
      * @param taskCount Number of tasks completed
-     * @param totalTokens Total tokens processed
      * @param uptimeSeconds Total uptime in seconds
      * @param responseScore Response quality score
      * @param lastUpdated Last update timestamp
      */
     struct Contribution {
         uint256 taskCount;
-        uint256 totalTokens;
         uint256 uptimeSeconds;
         uint256 responseScore;
         uint256 lastUpdated;

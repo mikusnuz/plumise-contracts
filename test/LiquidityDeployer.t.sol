@@ -69,46 +69,6 @@ contract LiquidityDeployerTest is Test {
         deployer.transfer(recipient, 1_000_000 ether);
     }
 
-    function testWrapAndAddLiquidity() public {
-        uint256 plmAmount = 1_000_000 ether;
-        uint256 tokenAmount = 500_000 ether;
-
-        deployer.wrapAndAddLiquidity(router, token, plmAmount, tokenAmount);
-    }
-
-    function testWrapAndAddLiquidityRevertsInvalidRouter() public {
-        vm.expectRevert("Invalid router");
-        deployer.wrapAndAddLiquidity(address(0), token, 1_000_000 ether, 500_000 ether);
-    }
-
-    function testWrapAndAddLiquidityRevertsInvalidToken() public {
-        vm.expectRevert("Invalid token");
-        deployer.wrapAndAddLiquidity(router, address(0), 1_000_000 ether, 500_000 ether);
-    }
-
-    function testWrapAndAddLiquidityRevertsZeroPLM() public {
-        vm.expectRevert("PLM amount must be positive");
-        deployer.wrapAndAddLiquidity(router, token, 0, 500_000 ether);
-    }
-
-    function testWrapAndAddLiquidityRevertsZeroToken() public {
-        vm.expectRevert("Token amount must be positive");
-        deployer.wrapAndAddLiquidity(router, token, 1_000_000 ether, 0);
-    }
-
-    function testWrapAndAddLiquidityRevertsInsufficientBalance() public {
-        uint256 balance = deployer.getBalance();
-
-        vm.expectRevert("Insufficient PLM balance");
-        deployer.wrapAndAddLiquidity(router, token, balance + 1, 500_000 ether);
-    }
-
-    function testWrapAndAddLiquidityRevertsNonOwner() public {
-        vm.prank(recipient);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", recipient));
-        deployer.wrapAndAddLiquidity(router, token, 1_000_000 ether, 500_000 ether);
-    }
-
     function testGetBalance() public view {
         assertEq(deployer.getBalance(), TOTAL_ALLOCATION);
     }
@@ -134,12 +94,5 @@ contract LiquidityDeployerTest is Test {
 
         deployer.transfer(recipient, amount);
         assertEq(recipient.balance, amount);
-    }
-
-    function testFuzzWrapAndAddLiquidity(uint256 plmAmount, uint256 tokenAmount) public {
-        plmAmount = bound(plmAmount, 1 ether, TOTAL_ALLOCATION);
-        tokenAmount = bound(tokenAmount, 1 ether, type(uint128).max);
-
-        deployer.wrapAndAddLiquidity(router, token, plmAmount, tokenAmount);
     }
 }

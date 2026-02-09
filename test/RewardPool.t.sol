@@ -180,7 +180,7 @@ contract RewardPoolTest is Test {
         rewardPool.reportContribution(agent1, 10, 3600, 95);
 
         // Move to next epoch
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
 
         // Distribute rewards
         uint256 epoch = 0;
@@ -207,7 +207,7 @@ contract RewardPoolTest is Test {
         vm.stopPrank();
 
         // Move to next epoch
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
 
         // Distribute rewards
         rewardPool.distributeRewards(0);
@@ -216,11 +216,15 @@ contract RewardPoolTest is Test {
         uint256 totalScore = 249550;
         uint256 reward1 = (rewardAmount * 110300) / totalScore;
         uint256 reward2 = (rewardAmount * 56150) / totalScore;
-        uint256 reward3 = (rewardAmount * 83100) / totalScore;
+        // reward3 gets the remainder due to dust prevention
+        uint256 reward3 = rewardAmount - reward1 - reward2;
 
         assertEq(rewardPool.getPendingReward(agent1), reward1);
         assertEq(rewardPool.getPendingReward(agent2), reward2);
         assertEq(rewardPool.getPendingReward(agent3), reward3);
+
+        // Verify total equals reward amount (no dust loss)
+        assertEq(reward1 + reward2 + reward3, rewardAmount);
     }
 
     function test_DistributeRewards_NoContributions() public {
@@ -230,9 +234,10 @@ contract RewardPoolTest is Test {
         assertTrue(success);
 
         // Move to next epoch without any contributions
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
 
-        // Distribute rewards
+        // Distribute - no agents so epochDistributed but rewards stay
+        // Contract emits RewardsDistributed(epoch, 0, 0) for 0-agent case
         vm.expectEmit(true, true, true, true);
         emit RewardsDistributed(0, 0, 0);
 
@@ -251,7 +256,7 @@ contract RewardPoolTest is Test {
         rewardPool.reportContribution(agent1, 10, 3600, 95);
 
         // Move to next epoch
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
 
         // Distribute once
         rewardPool.distributeRewards(0);
@@ -276,7 +281,7 @@ contract RewardPoolTest is Test {
         rewardPool.reportContribution(agent1, 10, 3600, 95);
 
         // Move to next epoch and distribute
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
         rewardPool.distributeRewards(0);
 
         // Claim reward
@@ -361,10 +366,10 @@ contract RewardPoolTest is Test {
     function test_GetCurrentEpoch() public {
         assertEq(rewardPool.getCurrentEpoch(), 0);
 
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
         assertEq(rewardPool.getCurrentEpoch(), 1);
 
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
         assertEq(rewardPool.getCurrentEpoch(), 2);
     }
 
@@ -377,7 +382,7 @@ contract RewardPoolTest is Test {
         rewardPool.reportContribution(agent1, 10, 3600, 90);
 
         // Move to epoch 1
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
 
         // Epoch 1: agent2 contributes
         (success, ) = address(rewardPool).call{value: 5 ether}("");
@@ -387,7 +392,7 @@ contract RewardPoolTest is Test {
         rewardPool.reportContribution(agent2, 8, 2700, 95);
 
         // Move to epoch 2
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
 
         // Distribute epoch 0
         rewardPool.distributeRewards(0);
@@ -421,9 +426,10 @@ contract RewardPoolTest is Test {
     }
 
     function testFuzz_ReportContribution(uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore) public {
-        vm.assume(taskCount < type(uint128).max);
-        vm.assume(uptimeSeconds < type(uint128).max);
-        vm.assume(responseScore < type(uint128).max);
+        // Bound inputs to validation limits
+        taskCount = bound(taskCount, 0, 10_000);
+        uptimeSeconds = bound(uptimeSeconds, 0, 604_800);
+        responseScore = bound(responseScore, 0, 1_000_000);
 
         vm.prank(oracle);
         rewardPool.reportContribution(agent1, taskCount, uptimeSeconds, responseScore);
@@ -447,7 +453,7 @@ contract RewardPoolTest is Test {
         rewardPool.reportContribution(agent1, 10, 3600, 95);
 
         // Move to next epoch and distribute
-        vm.roll(block.number + 720);
+        vm.roll(block.number + 1200);
         rewardPool.distributeRewards(0);
 
         // Agent should get all rewards
