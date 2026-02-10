@@ -111,18 +111,24 @@ contract ChallengeManager is IChallengeManager, Ownable {
         // Verify solution
         require(verifySolution(challengeId, solution, msg.sender), "Invalid solution");
 
-        // Mark as solved
+        // SECURITY: Effects before interactions (Checks-Effects-Interactions)
+        // Mark as solved FIRST to prevent reentrancy
         challenge.solved = true;
         challenge.solver = msg.sender;
 
         uint256 solveTime = block.timestamp - challenge.createdAt;
+        uint256 bonus = challenge.rewardBonus;
 
+        // Clear bonus to prevent reentrancy drain
+        challenge.rewardBonus = 0;
+
+        // SECURITY: External calls last
         // Report to reward pool as task contribution
         rewardPool.reportContribution(msg.sender, 1, 0, 100);
 
         // Transfer bonus reward if exists
-        if (challenge.rewardBonus > 0) {
-            (bool success,) = msg.sender.call{value: challenge.rewardBonus}("");
+        if (bonus > 0) {
+            (bool success,) = msg.sender.call{value: bonus}("");
             require(success, "Bonus transfer failed");
         }
 

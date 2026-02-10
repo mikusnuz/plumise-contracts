@@ -9,6 +9,12 @@ import "./interfaces/IInferencePayment.sol";
  * @title InferencePayment
  * @notice Manages payment for AI inference on Plumise chain
  * @dev Users deposit PLM to get Pro tier access
+ *
+ * SECURITY NOTES:
+ * - Treasury must be a trusted contract/EOA that always accepts ETH
+ * - If treasury rejects transfers, useCredits() will fail (DOS risk)
+ * - Future improvement: Use pull pattern for treasury withdrawals
+ * - Oracle address is single point of trust (consider multi-sig)
  */
 contract InferencePayment is IInferencePayment, Ownable, ReentrancyGuard {
     /// @notice Pro tier requires minimum 100 PLM deposit
@@ -69,18 +75,24 @@ contract InferencePayment is IInferencePayment, Ownable, ReentrancyGuard {
         uint256 cost = (tokenCount * costPer1000Tokens) / 1000;
         require(userCredits[user].balance >= cost, "Insufficient balance");
 
+        // SECURITY: Effects before interactions (Checks-Effects-Interactions)
         userCredits[user].balance -= cost;
         userCredits[user].usedCredits += cost;
 
         // Downgrade from Pro if below minimum
-        if (userCredits[user].balance < PRO_TIER_MINIMUM && userCredits[user].tier == 1) {
+        uint256 oldTier = userCredits[user].tier;
+        if (userCredits[user].balance < PRO_TIER_MINIMUM && oldTier == 1) {
             userCredits[user].tier = 0;
-            emit TierChanged(user, 1, 0);
         }
 
+        // SECURITY: External call last to prevent reentrancy
         // Transfer fee to treasury
         (bool success,) = treasury.call{value: cost}("");
         require(success, "Treasury transfer failed");
+
+        if (oldTier == 1 && userCredits[user].tier == 0) {
+            emit TierChanged(user, 1, 0);
+        }
 
         emit CreditUsed(user, tokenCount, cost);
     }
@@ -159,7 +171,8 @@ contract InferencePayment is IInferencePayment, Ownable, ReentrancyGuard {
      * @param _cost New cost in wei
      */
     function setCostPer1000Tokens(uint256 _cost) external override onlyOwner {
-        require(_cost > 0, "Invalid cost");
+        // SECURITY: Enforce minimum cost to prevent economic exploit
+        require(_cost >= 0.0001 ether, "Cost too low");
         uint256 oldCost = costPer1000Tokens;
         costPer1000Tokens = _cost;
         emit CostUpdated(oldCost, _cost);

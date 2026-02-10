@@ -269,7 +269,7 @@ contract InferencePaymentTest is Test {
     }
 
     function test_SetCostPer1000Tokens_InvalidCost() public {
-        vm.expectRevert("Invalid cost");
+        vm.expectRevert("Cost too low");
         payment.setCostPer1000Tokens(0);
     }
 

@@ -10,6 +10,12 @@ import "./interfaces/IAgentRegistry.sol";
  * @title RewardPool
  * @notice Receives block rewards and distributes them to AI agents based on contributions
  * @dev Block rewards are sent by Geth's Finalize() function
+ *
+ * SECURITY NOTES:
+ * - Oracle is single point of trust for reporting contributions
+ * - Consider implementing multi-oracle or oracle reputation system
+ * - Contribution bounds (MAX_TASK_COUNT, MAX_PROCESSED_TOKENS) prevent overflow
+ * - Storage layout MUST NOT change (genesis contract at 0x1000)
  */
 contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     /// @notice Blocks per epoch (1200 blocks = 1 hour at 3s blocks)
@@ -158,6 +164,17 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
 
         uint256 epoch = getCurrentEpoch();
 
+        // SECURITY: Check for overflow before updating cumulative contributions
+        // Solidity 0.8.20 has automatic overflow checks, but explicit bounds prevent DOS
+        require(
+            contributions[agent].taskCount + taskCount <= type(uint128).max,
+            "Task count overflow"
+        );
+        require(
+            contributions[agent].processedTokens + processedTokens <= type(uint128).max,
+            "Processed tokens overflow"
+        );
+
         // Update cumulative contributions
         contributions[agent].taskCount += taskCount;
         contributions[agent].uptimeSeconds += uptimeSeconds;
@@ -186,6 +203,8 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     /**
      * @notice Distribute rewards for an epoch
      * @param epoch Epoch number to distribute
+     * @dev SECURITY: Gas optimization - caches scores to avoid recalculation
+     *      Maximum 200 agents per epoch prevents gas DOS
      */
     function distributeRewards(uint256 epoch) external override {
         require(epoch < getCurrentEpoch(), "Epoch not ended");
@@ -203,12 +222,13 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
             return;
         }
 
-        // Calculate total score
+        // OPTIMIZATION: Pre-calculate all scores to avoid double iteration gas cost
+        uint256[] memory scores = new uint256[](agentCount);
         uint256 totalScore = 0;
+
         for (uint256 i = 0; i < agentCount; i++) {
-            address agent = agents[i];
-            uint256 score = calculateScore(epochContributions[epoch][agent]);
-            totalScore += score;
+            scores[i] = calculateScore(epochContributions[epoch][agents[i]]);
+            totalScore += scores[i];
         }
 
         if (totalScore == 0) {
@@ -224,24 +244,21 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
 
         // Find last scoring agent index
         for (uint256 i = 0; i < agentCount; i++) {
-            uint256 score = calculateScore(epochContributions[epoch][agents[i]]);
-            if (score > 0) {
+            if (scores[i] > 0) {
                 lastScoringIndex = i;
             }
         }
 
         for (uint256 i = 0; i < agentCount; i++) {
-            address agent = agents[i];
-            uint256 score = calculateScore(epochContributions[epoch][agent]);
-
-            if (score > 0) {
+            if (scores[i] > 0) {
                 uint256 reward;
                 if (i == lastScoringIndex) {
+                    // Last agent gets remainder to prevent dust
                     reward = totalReward - totalDistributed;
                 } else {
-                    reward = (totalReward * score) / totalScore;
+                    reward = (totalReward * scores[i]) / totalScore;
                 }
-                pendingRewards[agent] += reward;
+                pendingRewards[agents[i]] += reward;
                 totalDistributed += reward;
             }
         }
@@ -355,6 +372,9 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @notice Calculate agent score based on contributions (V2 formula)
      * @param contribution Contribution data
      * @return Calculated score
+     * @dev SECURITY: Weights always sum to 100 (enforced by setRewardFormula)
+     *      No division by zero possible. All multiplications are safe due to
+     *      input validation (MAX_TASK_COUNT, MAX_PROCESSED_TOKENS, etc.)
      */
     function calculateScore(Contribution memory contribution) internal view returns (uint256) {
         return contribution.processedTokens * tokenWeight + contribution.taskCount * taskWeight
