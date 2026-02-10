@@ -20,8 +20,8 @@ interface IRewardPool {
         uint256 uptimeSeconds;
         uint256 responseScore;
         uint256 lastUpdated;
-        uint256 processedTokens;    // NEW Phase 2
-        uint256 avgLatencyInv;      // NEW Phase 2
+        uint256 processedTokens; // NEW Phase 2
+        uint256 avgLatencyInv; // NEW Phase 2
     }
 
     /**
@@ -89,8 +89,7 @@ interface IRewardPool {
      * @param uptimeSeconds Uptime in seconds
      * @param responseScore Response quality score
      */
-    function reportContribution(address agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore)
-        external;
+    function reportContribution(address agent, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore) external;
 
     /**
      * @notice Report agent contribution with Phase 2 metrics (V2)

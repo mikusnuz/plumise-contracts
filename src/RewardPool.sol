@@ -166,13 +166,9 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
 
         // SECURITY: Check for overflow before updating cumulative contributions
         // Solidity 0.8.20 has automatic overflow checks, but explicit bounds prevent DOS
+        require(contributions[agent].taskCount + taskCount <= type(uint128).max, "Task count overflow");
         require(
-            contributions[agent].taskCount + taskCount <= type(uint128).max,
-            "Task count overflow"
-        );
-        require(
-            contributions[agent].processedTokens + processedTokens <= type(uint128).max,
-            "Processed tokens overflow"
+            contributions[agent].processedTokens + processedTokens <= type(uint128).max, "Processed tokens overflow"
         );
 
         // Update cumulative contributions
