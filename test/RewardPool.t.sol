@@ -323,6 +323,68 @@ contract RewardPoolTest is Test {
         vm.stopPrank();
     }
 
+    function test_ClaimRewardFor_Precompile() public {
+        // Send rewards and report contribution
+        uint256 rewardAmount = 10 ether;
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
+        assertTrue(success);
+
+        vm.prank(oracle);
+        rewardPool.reportContribution(agent1, 10, 3600, 95);
+
+        // Move to next epoch and distribute
+        vm.roll(block.number + 1200);
+        rewardPool.distributeRewards(0);
+
+        // Claim reward via precompile (0x23)
+        uint256 balanceBefore = agent1.balance;
+        uint256 pendingReward = rewardPool.getPendingReward(agent1);
+
+        vm.startPrank(address(0x23)); // Simulate precompile call
+        vm.expectEmit(true, true, true, true);
+        emit RewardClaimed(agent1, pendingReward);
+
+        rewardPool.claimRewardFor(agent1);
+        vm.stopPrank();
+
+        assertEq(agent1.balance, balanceBefore + pendingReward);
+        assertEq(rewardPool.getPendingReward(agent1), 0);
+    }
+
+    function test_ClaimRewardFor_OnlyPrecompile() public {
+        // Setup rewards
+        (bool success,) = address(rewardPool).call{value: 10 ether}("");
+        assertTrue(success);
+
+        vm.prank(oracle);
+        rewardPool.reportContribution(agent1, 10, 3600, 95);
+
+        vm.roll(block.number + 1200);
+        rewardPool.distributeRewards(0);
+
+        // Try to call claimRewardFor from non-precompile address
+        vm.startPrank(agent2);
+        vm.expectRevert("Only precompile 0x23");
+        rewardPool.claimRewardFor(agent1);
+        vm.stopPrank();
+    }
+
+    function test_ClaimRewardFor_NotRegistered() public {
+        address unregistered = makeAddr("unregistered");
+
+        vm.startPrank(address(0x23));
+        vm.expectRevert("Not registered");
+        rewardPool.claimRewardFor(unregistered);
+        vm.stopPrank();
+    }
+
+    function test_ClaimRewardFor_NoRewards() public {
+        vm.startPrank(address(0x23));
+        vm.expectRevert("No rewards");
+        rewardPool.claimRewardFor(agent1);
+        vm.stopPrank();
+    }
+
     function test_SetRewardFormula() public {
         vm.expectEmit(true, true, true, true);
         emit FormulaUpdated(30, 30, 25, 15);

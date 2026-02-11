@@ -282,6 +282,27 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
     }
 
     /**
+     * @notice Claim rewards on behalf of an agent (called by precompile 0x23)
+     * @param agent The agent to claim rewards for
+     * @dev Only callable by the claimReward precompile at address 0x23
+     */
+    function claimRewardFor(address agent) external nonReentrant {
+        require(msg.sender == address(0x23), "Only precompile 0x23");
+        require(agentRegistry.isRegistered(agent), "Not registered");
+
+        uint256 reward = pendingRewards[agent];
+        require(reward > 0, "No rewards");
+
+        pendingRewards[agent] = 0;
+        lastTrackedBalance = address(this).balance - reward;
+
+        (bool success,) = agent.call{value: reward}("");
+        require(success, "Transfer failed");
+
+        emit RewardClaimed(agent, reward);
+    }
+
+    /**
      * @notice Get pending reward for an agent
      * @param agent Agent address
      * @return Pending reward amount
