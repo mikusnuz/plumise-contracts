@@ -6,7 +6,7 @@ Smart contract suite for the Plumise AI-native blockchain.
 
 ## Overview
 
-Plumise is a platform where AI agents operate on-chain. This repository contains the core smart contracts for agent registration, reward distribution, tokenomics vesting, and governance.
+Plumise is a platform where AI agents operate on-chain. This repository contains the core smart contracts for agent registration, reward distribution, inference payment, tokenomics vesting, and governance.
 
 ## Contracts
 
@@ -110,6 +110,35 @@ Manages funds for DEX liquidity provisioning.
 
 Manages the AI agent challenge system.
 
+### 8. InferencePayment
+
+Manages PLM payment for AI inference on the Plumise chain.
+
+**Key Functions:**
+- `deposit()` - Deposit PLM to get Pro tier access
+- `withdraw(uint256)` - Withdraw remaining balance
+- `useCredits(address, uint256)` - Gateway deducts credits for inference usage (Gateway only)
+- `getUserTier(address)` - Get user tier (0 = Free, 1 = Pro)
+- `getUserBalance(address)` - Get user balance
+- `isProTier(address)` - Check if user is Pro tier
+- `setGateway(address)` - Set gateway address (Owner)
+- `setCostPer1000Tokens(uint256)` - Set cost per 1000 tokens (Owner)
+- `setTreasury(address)` - Set treasury address (Owner)
+
+**Tier System:**
+- Free Tier: Basic access (0 PLM balance)
+- Pro Tier: Requires minimum 100 PLM deposit
+- Cost: 0.001 PLM per 1000 tokens (adjustable)
+- Fees collected to Foundation Treasury (0x1001)
+
+**Deployment:**
+```bash
+# Deploy InferencePayment
+forge script script/DeployInferencePayment.s.sol:DeployInferencePayment \
+  --rpc-url http://localhost:26902 \
+  --broadcast
+```
+
 ## Tech Stack
 
 - Solidity 0.8.20
@@ -156,11 +185,16 @@ forge test --gas-report
 cp .env.example .env
 # Set PRIVATE_KEY, RPC_URL, etc.
 
-# Deploy to Plumise mainnet
+# Deploy AgentRegistry to Plumise mainnet
 forge script script/DeployAgentRegistry.s.sol:DeployAgentRegistry \
   --rpc-url https://node-1.plm.plumbug.studio/rpc \
   --broadcast \
   --verify
+
+# Deploy InferencePayment
+forge script script/DeployInferencePayment.s.sol:DeployInferencePayment \
+  --rpc-url https://node-1.plm.plumbug.studio/rpc \
+  --broadcast
 ```
 
 ## Project Structure
@@ -175,9 +209,12 @@ plumise-contracts/
 │   ├── EcosystemFund.sol         # Ecosystem fund (governance)
 │   ├── TeamVesting.sol           # Team vesting
 │   ├── LiquidityDeployer.sol     # Liquidity deployer
+│   ├── InferencePayment.sol      # AI inference payment system
 │   └── interfaces/
 ├── test/                         # Test files
 ├── script/                       # Deployment scripts
+│   ├── DeployAgentRegistry.s.sol
+│   └── DeployInferencePayment.s.sol
 ├── docs/                         # Documentation
 │   ├── audit/                    # Security audit reports
 │   │   ├── FINAL_REPORT.md       # Final comprehensive audit (EN)

@@ -110,6 +110,35 @@ DEX 유동성 공급을 위한 자금을 관리합니다.
 
 AI 에이전트 챌린지 시스템을 관리합니다.
 
+### 8. InferencePayment
+
+Plumise 체인에서 AI 추론을 위한 PLM 결제를 관리합니다.
+
+**주요 기능:**
+- `deposit()` - PLM 예치하여 Pro 등급 획득
+- `withdraw(uint256)` - 잔액 인출
+- `useCredits(address, uint256)` - 추론 사용료 차감 (Gateway만 호출 가능)
+- `getUserTier(address)` - 사용자 등급 조회 (0 = Free, 1 = Pro)
+- `getUserBalance(address)` - 사용자 잔액 조회
+- `isProTier(address)` - Pro 등급 여부 확인
+- `setGateway(address)` - Gateway 주소 설정 (Owner)
+- `setCostPer1000Tokens(uint256)` - 1000 토큰당 비용 설정 (Owner)
+- `setTreasury(address)` - Treasury 주소 설정 (Owner)
+
+**등급 시스템:**
+- Free 등급: 기본 접근 (0 PLM 잔액)
+- Pro 등급: 최소 100 PLM 예치 필요
+- 비용: 1000 토큰당 0.001 PLM (조정 가능)
+- 수수료는 Foundation Treasury (0x1001)로 전송
+
+**배포:**
+```bash
+# InferencePayment 배포
+forge script script/DeployInferencePayment.s.sol:DeployInferencePayment \
+  --rpc-url http://localhost:26902 \
+  --broadcast
+```
+
 ## 기술 스택
 
 - Solidity 0.8.20
@@ -175,6 +204,7 @@ plumise-contracts/
 │   ├── EcosystemFund.sol         # 생태계 자금 (거버넌스)
 │   ├── TeamVesting.sol           # 팀 베스팅
 │   ├── LiquidityDeployer.sol     # 유동성 배포
+│   ├── InferencePayment.sol      # AI 추론 결제 시스템
 │   └── interfaces/
 ├── test/                         # 테스트 파일
 ├── script/                       # 배포 스크립트
