@@ -1,0 +1,20 @@
+{
+  "name": "plumise-testnet-e2e",
+  "version": "1.0.0",
+  "description": "E2E integration tests for Plumise v2 testnet",
+  "main": "testnet-e2e.ts",
+  "scripts": {
+    "test": "ts-node testnet-e2e.ts"
+  },
+  "keywords": ["plumise", "testnet", "e2e", "blockchain", "ai"],
+  "author": "PlumBug Studio",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

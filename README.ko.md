@@ -220,12 +220,43 @@ forge inspect LiquidityDeployer deployedBytecode > LiquidityDeployer.runtime.hex
 - immutable 변수 사용 불가 (일반 state variable로 변경됨)
 - 블록 보상은 RewardPool의 `syncRewards()` 함수로 추적
 
+## 테스트
+
+### 유닛 테스트
+
+모든 컨트랙트에 대한 Foundry 테스트 실행:
+
+```bash
+forge test
+forge test -vvv  # 상세 출력
+```
+
+### E2E 통합 테스트
+
+Plumise v2 테스트넷에 대한 엔드투엔드 통합 테스트는 `test/e2e/`에서 확인할 수 있습니다:
+
+```bash
+cd test/e2e
+npm install
+npm test
+```
+
+**테스트 범위:**
+- Precompile 0x21을 통한 에이전트 등록
+- Precompile 0x22를 통한 에이전트 하트비트
+- Precompile 0x20을 통한 추론 검증
+- Precompile 0x23을 통한 보상 청구
+- 엣지 케이스 검증 (중복 등록, 무단 호출 등)
+
+자세한 문서는 `test/e2e/README.md`를, 최신 테스트 결과는 `test/e2e/TEST_RESULTS.md`를 참조하세요.
+
 ## 보안
 
 - 모든 컨트랙트는 검증된 OpenZeppelin 라이브러리를 사용합니다
 - Ownable 패턴으로 관리자 권한을 제어합니다
 - ReentrancyGuard로 재진입 공격을 방지합니다
-- 포괄적인 테스트 커버리지를 갖추고 있습니다
+- 포괄적인 테스트 커버리지를 갖추고 있습니다 (유닛 + E2E)
+- 2단계 독립 보안 감사 완료 (`docs/audit/` 참조)
 
 ## 라이선스
 

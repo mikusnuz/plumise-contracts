@@ -220,12 +220,43 @@ Refer to `docs/GENESIS_STORAGE_LAYOUT.md` for storage layout and initial values.
 - Immutable variables cannot be used (converted to regular state variables)
 - Block rewards are tracked through the RewardPool's `syncRewards()` function
 
+## Testing
+
+### Unit Tests
+
+Run Foundry tests for all contracts:
+
+```bash
+forge test
+forge test -vvv  # Verbose output
+```
+
+### E2E Integration Tests
+
+End-to-end integration tests against the Plumise v2 testnet are available in `test/e2e/`:
+
+```bash
+cd test/e2e
+npm install
+npm test
+```
+
+**Test Coverage:**
+- Agent registration via precompile 0x21
+- Agent heartbeat via precompile 0x22
+- Inference verification via precompile 0x20
+- Reward claiming via precompile 0x23
+- Edge case validation (double registration, unauthorized calls, etc.)
+
+See `test/e2e/README.md` for detailed documentation and `test/e2e/TEST_RESULTS.md` for the latest test results.
+
 ## Security
 
 - All contracts use audited OpenZeppelin libraries
 - Admin privileges controlled via the Ownable pattern
 - Reentrancy protection with ReentrancyGuard
-- Comprehensive test coverage
+- Comprehensive test coverage (unit + E2E)
+- 2-pass independent security audit (see `docs/audit/`)
 
 ## License
 
