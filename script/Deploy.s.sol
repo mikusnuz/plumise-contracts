@@ -56,6 +56,46 @@ contract Deploy is Script {
 
         vm.stopBroadcast();
 
+        // ========== CT-03: Post-Deployment Verification ==========
+        console.log("\n=== Post-Deployment Verification ===");
+
+        // 1. Verify contract code deployment
+        require(address(agentRegistry).code.length > 0, "AgentRegistry not deployed");
+        require(address(rewardPool).code.length > 0, "RewardPool not deployed");
+        require(address(challengeManager).code.length > 0, "ChallengeManager not deployed");
+        console.log("[PASS] All contracts have code deployed");
+
+        // 2. Verify ownership
+        require(agentRegistry.owner() == deployer, "AgentRegistry owner mismatch");
+        require(rewardPool.owner() == deployer, "RewardPool owner mismatch");
+        require(challengeManager.owner() == deployer, "ChallengeManager owner mismatch");
+        console.log("[PASS] All contracts owned by deployer:", deployer);
+
+        // 3. Verify cross-references
+        require(address(rewardPool.agentRegistry()) == address(agentRegistry), "RewardPool agentRegistry mismatch");
+        require(rewardPool.oracle() == address(challengeManager), "RewardPool oracle mismatch");
+        require(address(challengeManager.agentRegistry()) == address(agentRegistry), "ChallengeManager agentRegistry mismatch");
+        require(address(challengeManager.rewardPool()) == address(rewardPool), "ChallengeManager rewardPool mismatch");
+        console.log("[PASS] Cross-references configured correctly");
+
+        // 4. Verify initial parameters
+        require(rewardPool.tokenWeight() == 40, "RewardPool tokenWeight incorrect");
+        require(rewardPool.taskWeight() == 25, "RewardPool taskWeight incorrect");
+        require(rewardPool.uptimeWeight() == 20, "RewardPool uptimeWeight incorrect");
+        require(rewardPool.latencyWeight() == 15, "RewardPool latencyWeight incorrect");
+        require(rewardPool.currentEpoch() == 0, "RewardPool initial epoch should be 0");
+        require(rewardPool.deployBlock() == block.number, "RewardPool deployBlock incorrect");
+        console.log("[PASS] RewardPool parameters verified");
+
+        // 5. Verify AgentRegistry constants
+        require(agentRegistry.HEARTBEAT_TIMEOUT() == 300, "AgentRegistry HEARTBEAT_TIMEOUT incorrect");
+        require(agentRegistry.getTotalAgentCount() == 0, "AgentRegistry should have 0 agents initially");
+        console.log("[PASS] AgentRegistry initial state verified");
+
+        // 6. Verify ChallengeManager automation
+        require(challengeManager.isAutomation(deployer), "Deployer should be automation");
+        console.log("[PASS] ChallengeManager automation configured");
+
         // Print deployment summary
         console.log("\n=== Deployment Summary ===");
         console.log("Chain ID:", block.chainid);

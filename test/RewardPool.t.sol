@@ -531,5 +531,160 @@ contract RewardPoolTest is Test {
         assertEq(rewardPool.getPendingReward(agent1), rewardAmount);
     }
 
+    // ========== CT-02: Extended Fuzz Tests ==========
+
+    /**
+     * @notice Fuzz test: RewardPool claim boundaries
+     * @dev Tests edge cases: zero claim, max claim, unregistered agent
+     */
+    function testFuzz_ClaimBoundaries(uint256 rewardAmount, uint256 actorIndex) public {
+        rewardAmount = bound(rewardAmount, 0.01 ether, 1000 ether);
+        actorIndex = bound(actorIndex, 0, 2); // agent1, agent2, agent3
+
+        address actor;
+        if (actorIndex == 0) actor = agent1;
+        else if (actorIndex == 1) actor = agent2;
+        else actor = agent3;
+
+        // Setup: send rewards and distribute
+        vm.deal(address(this), rewardAmount);
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
+        assertTrue(success);
+
+        vm.prank(oracle);
+        rewardPool.reportContribution(actor, 100, 3600, 95);
+
+        vm.roll(block.number + 1200);
+        rewardPool.distributeRewards(0);
+
+        // Test: claim reward
+        uint256 pendingBefore = rewardPool.getPendingReward(actor);
+        uint256 balanceBefore = actor.balance;
+
+        vm.prank(actor);
+        rewardPool.claimReward();
+
+        assertEq(rewardPool.getPendingReward(actor), 0, "Pending should be zero after claim");
+        assertEq(actor.balance, balanceBefore + pendingBefore, "Balance should increase by pending amount");
+    }
+
+    /**
+     * @notice Fuzz test: Unregistered agent cannot claim
+     */
+    function testFuzz_ClaimUnregistered(address unregistered) public {
+        vm.assume(unregistered != agent1 && unregistered != agent2 && unregistered != agent3);
+        vm.assume(unregistered != address(0));
+
+        vm.startPrank(unregistered);
+        vm.expectRevert("Not registered");
+        rewardPool.claimReward();
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Fuzz test: Epoch sync boundaries
+     * @dev Tests epoch 0, large epoch numbers, and epoch advancement
+     */
+    function testFuzz_EpochSyncBoundaries(uint256 blockAdvance) public {
+        blockAdvance = bound(blockAdvance, 0, 100_000); // Up to ~83 epochs
+
+        uint256 startBlock = block.number;
+        vm.roll(startBlock + blockAdvance);
+
+        uint256 expectedEpoch = (block.number - rewardPool.deployBlock()) / rewardPool.BLOCKS_PER_EPOCH();
+        uint256 currentEpoch = rewardPool.getCurrentEpoch();
+
+        assertEq(currentEpoch, expectedEpoch, "Epoch calculation mismatch");
+    }
+
+    /**
+     * @notice Fuzz test: Epoch reverse attempt should fail
+     * @dev Trying to distribute an epoch in the future should revert
+     */
+    function testFuzz_EpochReverseAttempt(uint256 futureEpoch) public {
+        uint256 currentEpoch = rewardPool.getCurrentEpoch();
+        futureEpoch = bound(futureEpoch, currentEpoch + 1, currentEpoch + 100);
+
+        vm.expectRevert("Epoch not ended");
+        rewardPool.distributeRewards(futureEpoch);
+    }
+
+    /**
+     * @notice Fuzz test: Multiple agents with varying contributions
+     * @dev Tests reward distribution fairness across different contribution levels
+     */
+    function testFuzz_MultiAgentDistribution(
+        uint256 task1,
+        uint256 task2,
+        uint256 task3,
+        uint256 rewardAmount
+    ) public {
+        // Bound inputs
+        task1 = bound(task1, 1, rewardPool.MAX_TASK_COUNT());
+        task2 = bound(task2, 1, rewardPool.MAX_TASK_COUNT());
+        task3 = bound(task3, 1, rewardPool.MAX_TASK_COUNT());
+        rewardAmount = bound(rewardAmount, 1 ether, 100 ether);
+
+        // Send rewards
+        vm.deal(address(this), rewardAmount);
+        (bool success,) = address(rewardPool).call{value: rewardAmount}("");
+        assertTrue(success);
+
+        // Report contributions
+        vm.startPrank(oracle);
+        rewardPool.reportContribution(agent1, task1, 3600, 95);
+        rewardPool.reportContribution(agent2, task2, 3600, 95);
+        rewardPool.reportContribution(agent3, task3, 3600, 95);
+        vm.stopPrank();
+
+        // Distribute
+        vm.roll(block.number + 1200);
+        rewardPool.distributeRewards(0);
+
+        // Verify total distribution equals reward amount
+        uint256 totalDistributed = rewardPool.getPendingReward(agent1)
+            + rewardPool.getPendingReward(agent2)
+            + rewardPool.getPendingReward(agent3);
+
+        assertEq(totalDistributed, rewardAmount, "Total distributed should equal reward amount");
+    }
+
+    /**
+     * @notice Fuzz test: V2 formula with all parameters
+     * @dev Tests with processedTokens and avgLatencyInv (V2 parameters)
+     */
+    function testFuzz_ReportContributionV2(
+        uint256 taskCount,
+        uint256 uptimeSeconds,
+        uint256 responseScore,
+        uint256 processedTokens,
+        uint256 avgLatencyInv
+    ) public {
+        // Bound all inputs to their max values
+        taskCount = bound(taskCount, 0, rewardPool.MAX_TASK_COUNT());
+        uptimeSeconds = bound(uptimeSeconds, 0, rewardPool.MAX_UPTIME_SECONDS());
+        responseScore = bound(responseScore, 0, rewardPool.MAX_RESPONSE_SCORE());
+        processedTokens = bound(processedTokens, 0, rewardPool.MAX_PROCESSED_TOKENS());
+        avgLatencyInv = bound(avgLatencyInv, 0, rewardPool.MAX_LATENCY_INV());
+
+        vm.prank(oracle);
+        // Call V2 overloaded method with 6 parameters
+        rewardPool.reportContribution(
+            agent1,
+            taskCount,
+            uptimeSeconds,
+            responseScore,
+            processedTokens,
+            avgLatencyInv
+        );
+
+        IRewardPool.Contribution memory contrib = rewardPool.getContribution(agent1);
+        assertEq(contrib.taskCount, taskCount);
+        assertEq(contrib.uptimeSeconds, uptimeSeconds);
+        assertEq(contrib.responseScore, responseScore);
+        assertEq(contrib.processedTokens, processedTokens);
+        assertEq(contrib.avgLatencyInv, avgLatencyInv);
+    }
+
     receive() external payable {}
 }

@@ -34,6 +34,41 @@ contract DeployInferencePayment is Script {
 
         vm.stopBroadcast();
 
+        // ========== CT-03: Post-Deployment Verification ==========
+        console.log("\n=== Post-Deployment Verification ===");
+
+        // 1. Verify contract code deployment
+        require(address(inferencePayment).code.length > 0, "InferencePayment not deployed");
+        console.log("[PASS] Contract has code deployed");
+
+        // 2. Verify ownership
+        require(inferencePayment.owner() == deployer, "Owner should be deployer");
+        console.log("[PASS] Owner verified:", deployer);
+
+        // 3. Verify initial parameters
+        require(inferencePayment.gateway() == deployer, "Gateway should be deployer initially");
+        require(inferencePayment.treasury() == FOUNDATION_TREASURY, "Treasury should be Foundation");
+        console.log("[PASS] Gateway and Treasury verified");
+
+        // 4. Verify constants
+        require(inferencePayment.PRO_TIER_MINIMUM() == 100 ether, "PRO_TIER_MINIMUM should be 100 PLM");
+        require(inferencePayment.costPer1000Tokens() == 0.001 ether, "costPer1000Tokens should be 0.001 PLM");
+        console.log("[PASS] Constants verified");
+
+        // 5. Verify treasury address is valid (not zero)
+        require(FOUNDATION_TREASURY != address(0), "Treasury address is zero");
+        console.log("[PASS] Treasury address is non-zero");
+
+        // 6. Test getUserTier on zero address (should return 0 for Free tier)
+        uint256 zeroAddressTier = inferencePayment.getUserTier(address(0));
+        require(zeroAddressTier == 0, "getUserTier(0x0) should be 0");
+        console.log("[PASS] getUserTier for zero address returns Free tier");
+
+        // 7. Verify getUserBalance on zero address (should be 0)
+        uint256 zeroBalance = inferencePayment.getUserBalance(address(0));
+        require(zeroBalance == 0, "Zero address should have 0 balance");
+        console.log("[PASS] Zero address has 0 balance");
+
         // Verify deployment
         console.log("\n=== Verification ===");
         console.log("Owner:", inferencePayment.owner());
@@ -41,11 +76,6 @@ contract DeployInferencePayment is Script {
         console.log("Treasury:", inferencePayment.treasury());
         console.log("PRO_TIER_MINIMUM:", inferencePayment.PRO_TIER_MINIMUM() / 1 ether, "PLM");
         console.log("Cost per 1000 tokens:", inferencePayment.costPer1000Tokens());
-
-        // Test getUserTier on zero address (should return 0 for Free tier)
-        uint256 zeroAddressTier = inferencePayment.getUserTier(address(0));
-        console.log("getUserTier(0x0):", zeroAddressTier, "(should be 0)");
-        require(zeroAddressTier == 0, "getUserTier verification failed");
 
         console.log("\n=== Deployment Complete ===");
         console.log("Contract Address:", address(inferencePayment));

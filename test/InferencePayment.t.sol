@@ -381,5 +381,157 @@ contract InferencePaymentTest is Test {
         assertEq(payment.getUserBalance(user1), depositAmount - expectedCost);
     }
 
+    // ========== CT-02: Extended Fuzz Tests ==========
+
+    /**
+     * @notice Fuzz test: Zero token payment should revert
+     */
+    function testFuzz_ZeroTokenPayment() public {
+        vm.prank(user1);
+        payment.deposit{value: 10 ether}();
+
+        vm.startPrank(gateway);
+        vm.expectRevert("Zero tokens");
+        payment.useCredits(user1, 0);
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Fuzz test: Overflow attempt in token cost calculation
+     * @dev Tests extreme token counts to ensure no overflow
+     */
+    function testFuzz_TokenCostOverflowAttempt(uint256 tokenCount) public {
+        // Bound to reasonable but large values
+        tokenCount = bound(tokenCount, 1, type(uint128).max);
+
+        uint256 depositAmount = 100000 ether; // Very large deposit
+        vm.deal(user1, depositAmount);
+
+        vm.prank(user1);
+        payment.deposit{value: depositAmount}();
+
+        // Calculate expected cost (should not overflow)
+        uint256 expectedCost = (tokenCount * payment.costPer1000Tokens()) / 1000;
+
+        if (expectedCost <= depositAmount) {
+            vm.prank(gateway);
+            payment.useCredits(user1, tokenCount);
+
+            assertEq(payment.getUserBalance(user1), depositAmount - expectedCost);
+        } else {
+            vm.startPrank(gateway);
+            vm.expectRevert("Insufficient balance");
+            payment.useCredits(user1, tokenCount);
+            vm.stopPrank();
+        }
+    }
+
+    /**
+     * @notice Fuzz test: Tier transition boundaries
+     * @dev Tests automatic tier upgrades and downgrades at various thresholds
+     */
+    function testFuzz_TierTransitionBoundaries(uint256 depositAmount, uint256 withdrawAmount) public {
+        uint256 proMinimum = payment.PRO_TIER_MINIMUM();
+
+        depositAmount = bound(depositAmount, 1 ether, 1000 ether);
+        vm.deal(user1, depositAmount);
+
+        vm.prank(user1);
+        payment.deposit{value: depositAmount}();
+
+        // Check initial tier
+        bool shouldBePro = depositAmount >= proMinimum;
+        assertEq(payment.isProTier(user1), shouldBePro, "Initial tier incorrect");
+
+        // Try to withdraw
+        if (depositAmount > 0) {
+            withdrawAmount = bound(withdrawAmount, 1, depositAmount);
+
+            vm.prank(user1);
+            payment.withdraw(withdrawAmount);
+
+            uint256 remainingBalance = depositAmount - withdrawAmount;
+            bool shouldBeProAfter = remainingBalance >= proMinimum;
+
+            assertEq(payment.isProTier(user1), shouldBeProAfter, "Tier after withdrawal incorrect");
+            assertEq(payment.getUserBalance(user1), remainingBalance, "Balance after withdrawal incorrect");
+        }
+    }
+
+    /**
+     * @notice Fuzz test: Multiple deposits accumulation
+     * @dev Tests that multiple deposits correctly accumulate and handle tier transitions
+     */
+    function testFuzz_MultipleDeposits(uint256 deposit1, uint256 deposit2, uint256 deposit3) public {
+        deposit1 = bound(deposit1, 0.01 ether, 50 ether);
+        deposit2 = bound(deposit2, 0.01 ether, 50 ether);
+        deposit3 = bound(deposit3, 0.01 ether, 50 ether);
+
+        uint256 totalDeposit = deposit1 + deposit2 + deposit3;
+        vm.deal(user1, totalDeposit);
+
+        vm.startPrank(user1);
+
+        payment.deposit{value: deposit1}();
+        uint256 balance1 = payment.getUserBalance(user1);
+        assertEq(balance1, deposit1);
+
+        payment.deposit{value: deposit2}();
+        uint256 balance2 = payment.getUserBalance(user1);
+        assertEq(balance2, deposit1 + deposit2);
+
+        payment.deposit{value: deposit3}();
+        uint256 balance3 = payment.getUserBalance(user1);
+        assertEq(balance3, totalDeposit);
+
+        vm.stopPrank();
+
+        // Final tier should match total
+        bool shouldBePro = totalDeposit >= payment.PRO_TIER_MINIMUM();
+        assertEq(payment.isProTier(user1), shouldBePro);
+    }
+
+    /**
+     * @notice Fuzz test: Credit usage exactly at balance
+     * @dev Tests using credits when balance exactly equals cost (edge case)
+     */
+    function testFuzz_ExactBalanceUsage(uint256 depositAmount) public {
+        depositAmount = bound(depositAmount, 0.001 ether, 10 ether);
+
+        vm.prank(user1);
+        payment.deposit{value: depositAmount}();
+
+        // Calculate token count that exactly depletes balance
+        uint256 tokenCount = (depositAmount * 1000) / payment.costPer1000Tokens();
+        uint256 exactCost = (tokenCount * payment.costPer1000Tokens()) / 1000;
+
+        vm.prank(gateway);
+        payment.useCredits(user1, tokenCount);
+
+        // Balance should be deposit minus exact cost (may have dust due to rounding)
+        uint256 remainingBalance = payment.getUserBalance(user1);
+        assertLe(remainingBalance, depositAmount - exactCost);
+    }
+
+    /**
+     * @notice Fuzz test: Withdrawal at exact balance
+     */
+    function testFuzz_WithdrawExactBalance(uint256 depositAmount) public {
+        depositAmount = bound(depositAmount, 1 ether, 100 ether);
+
+        vm.startPrank(user1);
+        payment.deposit{value: depositAmount}();
+
+        uint256 balanceBefore = user1.balance;
+
+        payment.withdraw(depositAmount);
+
+        assertEq(payment.getUserBalance(user1), 0, "Balance should be zero after full withdrawal");
+        assertEq(user1.balance, balanceBefore + depositAmount, "User should receive full deposit back");
+        assertEq(payment.getUserTier(user1), 0, "Tier should be Free after full withdrawal");
+
+        vm.stopPrank();
+    }
+
     receive() external payable {}
 }
