@@ -613,12 +613,7 @@ contract RewardPoolTest is Test {
      * @notice Fuzz test: Multiple agents with varying contributions
      * @dev Tests reward distribution fairness across different contribution levels
      */
-    function testFuzz_MultiAgentDistribution(
-        uint256 task1,
-        uint256 task2,
-        uint256 task3,
-        uint256 rewardAmount
-    ) public {
+    function testFuzz_MultiAgentDistribution(uint256 task1, uint256 task2, uint256 task3, uint256 rewardAmount) public {
         // Bound inputs
         task1 = bound(task1, 1, rewardPool.MAX_TASK_COUNT());
         task2 = bound(task2, 1, rewardPool.MAX_TASK_COUNT());
@@ -642,8 +637,7 @@ contract RewardPoolTest is Test {
         rewardPool.distributeRewards(0);
 
         // Verify total distribution equals reward amount
-        uint256 totalDistributed = rewardPool.getPendingReward(agent1)
-            + rewardPool.getPendingReward(agent2)
+        uint256 totalDistributed = rewardPool.getPendingReward(agent1) + rewardPool.getPendingReward(agent2)
             + rewardPool.getPendingReward(agent3);
 
         assertEq(totalDistributed, rewardAmount, "Total distributed should equal reward amount");
@@ -669,14 +663,7 @@ contract RewardPoolTest is Test {
 
         vm.prank(oracle);
         // Call V2 overloaded method with 6 parameters
-        rewardPool.reportContribution(
-            agent1,
-            taskCount,
-            uptimeSeconds,
-            responseScore,
-            processedTokens,
-            avgLatencyInv
-        );
+        rewardPool.reportContribution(agent1, taskCount, uptimeSeconds, responseScore, processedTokens, avgLatencyInv);
 
         IRewardPool.Contribution memory contrib = rewardPool.getContribution(agent1);
         assertEq(contrib.taskCount, taskCount);

@@ -74,7 +74,10 @@ contract Deploy is Script {
         // 3. Verify cross-references
         require(address(rewardPool.agentRegistry()) == address(agentRegistry), "RewardPool agentRegistry mismatch");
         require(rewardPool.oracle() == address(challengeManager), "RewardPool oracle mismatch");
-        require(address(challengeManager.agentRegistry()) == address(agentRegistry), "ChallengeManager agentRegistry mismatch");
+        require(
+            address(challengeManager.agentRegistry()) == address(agentRegistry),
+            "ChallengeManager agentRegistry mismatch"
+        );
         require(address(challengeManager.rewardPool()) == address(rewardPool), "ChallengeManager rewardPool mismatch");
         console.log("[PASS] Cross-references configured correctly");
 

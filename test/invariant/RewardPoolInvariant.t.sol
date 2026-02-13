@@ -116,7 +116,9 @@ contract RewardPoolHandler is Test {
         require(success, "Send rewards failed");
     }
 
-    function reportContribution(uint256 actorSeed, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore) public {
+    function reportContribution(uint256 actorSeed, uint256 taskCount, uint256 uptimeSeconds, uint256 responseScore)
+        public
+    {
         address actor = actors[actorSeed % actors.length];
 
         taskCount = bound(taskCount, 0, rewardPool.MAX_TASK_COUNT());

@@ -33,10 +33,7 @@ contract DeploymentVerificationTest is Test {
         );
 
         // 3. Deploy ChallengeManager
-        ChallengeManager challengeManager = new ChallengeManager(
-            address(agentRegistry),
-            address(rewardPool)
-        );
+        ChallengeManager challengeManager = new ChallengeManager(address(agentRegistry), address(rewardPool));
 
         // 4. Configure
         rewardPool.setOracle(address(challengeManager));
@@ -57,7 +54,9 @@ contract DeploymentVerificationTest is Test {
         // Verify cross-references
         assertEq(address(rewardPool.agentRegistry()), address(agentRegistry), "RewardPool agentRegistry mismatch");
         assertEq(rewardPool.oracle(), address(challengeManager), "RewardPool oracle mismatch");
-        assertEq(address(challengeManager.agentRegistry()), address(agentRegistry), "ChallengeManager agentRegistry mismatch");
+        assertEq(
+            address(challengeManager.agentRegistry()), address(agentRegistry), "ChallengeManager agentRegistry mismatch"
+        );
         assertEq(address(challengeManager.rewardPool()), address(rewardPool), "ChallengeManager rewardPool mismatch");
 
         // Verify initial parameters

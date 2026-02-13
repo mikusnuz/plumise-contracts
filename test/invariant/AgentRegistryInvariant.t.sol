@@ -130,10 +130,7 @@ contract AgentRegistryInvariantTest is Test {
         // Check for duplicates
         for (uint256 i = 0; i < allAgents.length; i++) {
             for (uint256 j = i + 1; j < allAgents.length; j++) {
-                assertFalse(
-                    allAgents[i] == allAgents[j],
-                    "Duplicate agent found in registry"
-                );
+                assertFalse(allAgents[i] == allAgents[j], "Duplicate agent found in registry");
             }
         }
     }
@@ -185,10 +182,7 @@ contract AgentRegistryInvariantTest is Test {
         address[] memory activeAgents = registry.getActiveAgents();
 
         for (uint256 i = 0; i < activeAgents.length; i++) {
-            assertTrue(
-                registry.isRegistered(activeAgents[i]),
-                "Active agent is not registered"
-            );
+            assertTrue(registry.isRegistered(activeAgents[i]), "Active agent is not registered");
         }
     }
 
@@ -242,10 +236,7 @@ contract AgentRegistryInvariantTest is Test {
             if (!isRegistered) {
                 // Verify actor is NOT in the list
                 for (uint256 j = 0; j < allAgents.length; j++) {
-                    assertFalse(
-                        allAgents[j] == actor,
-                        "Deregistered agent found in list"
-                    );
+                    assertFalse(allAgents[j] == actor, "Deregistered agent found in list");
                 }
             }
         }
