@@ -107,6 +107,15 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @dev Block rewards are added via state.AddBalance(), not receive()
      */
     function syncRewards() external {
+        _syncRewards();
+    }
+
+    /**
+     * @notice Internal sync to account for untracked balance changes
+     * @dev Must be called before any operation that adjusts lastTrackedBalance
+     *      to prevent unsynced block rewards from being absorbed
+     */
+    function _syncRewards() internal {
         uint256 currentBalance = address(this).balance;
         if (currentBalance <= lastTrackedBalance) {
             return; // No new rewards, exit gracefully
@@ -265,8 +274,10 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
 
     /**
      * @notice Claim accumulated rewards
+     * @dev Syncs untracked rewards first to prevent balance absorption
      */
     function claimReward() external override nonReentrant {
+        _syncRewards(); // Prevent unsynced block rewards from being absorbed
         require(agentRegistry.isRegistered(msg.sender), "Not registered");
 
         uint256 reward = pendingRewards[msg.sender];
@@ -285,8 +296,10 @@ contract RewardPool is IRewardPool, Ownable, ReentrancyGuard {
      * @notice Claim rewards on behalf of an agent (called by precompile 0x23)
      * @param agent The agent to claim rewards for
      * @dev Only callable by the claimReward precompile at address 0x23
+     *      Syncs untracked rewards first to prevent balance absorption
      */
     function claimRewardFor(address agent) external nonReentrant {
+        _syncRewards(); // Prevent unsynced block rewards from being absorbed
         require(msg.sender == address(0x23), "Only precompile 0x23");
         require(agentRegistry.isRegistered(agent), "Not registered");
 
