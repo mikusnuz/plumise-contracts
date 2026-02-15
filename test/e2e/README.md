@@ -30,7 +30,7 @@ npm install
 The test script is configured for the Plumise v2 testnet:
 
 - **Chain ID**: 419561
-- **RPC URL**: https://node-1.plumise.com/testnet/rpc
+- **RPC URL**: https://plug.plumise.com/rpc/testnet
 - **Deployer Address**: 0x5CEBec6EEeDc9040C72eA44fB1f8d28cD1079b8f
 
 ## Running Tests
@@ -102,7 +102,7 @@ npx ts-node testnet-e2e.ts
   Plumise v2 Testnet E2E Integration Test
 ================================================================================
 
-ℹ RPC URL: https://node-1.plumise.com/testnet/rpc
+ℹ RPC URL: https://plug.plumise.com/rpc/testnet
 ℹ Chain ID: 419561
 ℹ Deployer: 0x5CEBec6EEeDc9040C72eA44fB1f8d28cD1079b8f
 ℹ Test agent address: 0x...
@@ -141,7 +141,7 @@ npx ts-node testnet-e2e.ts
 
 If you encounter RPC connection issues:
 
-1. Verify the testnet is running: `curl https://node-1.plumise.com/testnet/rpc -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`
+1. Verify the testnet is running: `curl https://plug.plumise.com/rpc/testnet -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`
 2. Check if you can access the deployer account
 3. Ensure you have sufficient PLM for testing
 

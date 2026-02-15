@@ -1571,7 +1571,7 @@ Genesis 블록이 생성된 직후 자동 검증:
 #!/bin/bash
 # scripts/verify_genesis_deployment.sh
 
-RPC="https://node-1.plumise.com/rpc"
+RPC="https://plug.plumise.com/rpc"
 
 echo "Verifying genesis deployment..."
 
@@ -1691,7 +1691,7 @@ Genesis 배포 후 24/7 모니터링 필수:
 ```javascript
 // monitoring/watch_contracts.js
 const { ethers } = require("ethers");
-const provider = new ethers.JsonRpcProvider("https://node-1.plumise.com/rpc");
+const provider = new ethers.JsonRpcProvider("https://plug.plumise.com/rpc");
 
 const contracts = {
   rewardPool: "0x1000",

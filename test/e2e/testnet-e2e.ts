@@ -14,7 +14,7 @@ import { ethers } from 'ethers';
 // ============================================================================
 
 const CONFIG = {
-  RPC_URL: 'https://node-1.plumise.com/testnet/rpc',
+  RPC_URL: 'https://plug.plumise.com/rpc/testnet',
   CHAIN_ID: 419561,
   DEPLOYER_PRIVATE_KEY: '0x9c589993cc406d86117696ced0c24d1a76e37ad12bfc4bb44d911625ee18ed61',
   DEPLOYER_ADDRESS: '0x5CEBec6EEeDc9040C72eA44fB1f8d28cD1079b8f',

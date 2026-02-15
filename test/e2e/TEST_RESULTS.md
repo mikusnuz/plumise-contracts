@@ -2,7 +2,7 @@
 
 **Date**: 2026-02-11
 **Chain ID**: 419561
-**RPC**: https://node-1.plumise.com/testnet/rpc
+**RPC**: https://plug.plumise.com/rpc/testnet
 **Block Range**: 11991 - 12007
 
 ## Summary
