@@ -30,9 +30,9 @@ Registry contract for registering and managing AI agents.
 - `INACTIVE` - Inactive (heartbeat timeout)
 - `SLASHED` - Slashed
 
-### 2. RewardPool
+### 2. RewardPool (v2)
 
-Pool contract that distributes block rewards to agents.
+Pool contract that distributes block rewards to agents using an additive score formula.
 
 **Key Functions:**
 - `syncRewards()` - Sync block rewards (reflects `state.AddBalance`)
@@ -45,6 +45,47 @@ Pool contract that distributes block rewards to agents.
 - Epoch: 1,200 blocks (approximately 1 hour at 3-second block time)
 - Contribution score: `taskCount * taskWeight + uptimeSeconds * uptimeWeight + responseScore * responseWeight`
 - Block rewards are added via Geth's `state.AddBalance()` and tracked through `syncRewards()`
+
+**Status:** Active. Will be superseded by RewardPool v3 at a future fork.
+
+### 2.1. RewardPoolV3
+
+Next-generation reward distribution using Merkle claims with multi-model support and cluster incentives.
+
+**Key Functions:**
+- `setModel(bytes32 modelHash, uint256 multiplier)` - Register or update model multiplier (Oracle)
+- `deactivateModel(bytes32 modelHash)` - Deactivate a model (Oracle)
+- `submitEpoch(uint256 epochId, bytes32 merkleRoot, uint256 totalReward)` - Submit epoch settlement (Oracle)
+- `claim(uint256 epochId, uint256 amount, bytes32[] proof)` - Claim reward with Merkle proof
+- `claimFor(address agent, uint256 epochId, uint256 amount, bytes32[] proof)` - Sponsored claim
+- `setClusterParams(uint256 perNode, uint256 maxBonus)` - Adjust cluster bonus parameters (Oracle)
+
+**Architecture:**
+- **Merkle Claim**: Oracle computes rewards off-chain, submits Merkle root (O(1) gas)
+- **Individual Claims**: Each agent claims with proof (O(log N) gas per claim)
+- **Dispute Period**: 200 blocks (~10 minutes) before claims activate
+- **Model Registry**: Dynamic model multipliers based on parameter count
+- **Cluster Support**: Need-gated bonus for distributed inference clusters
+
+**Reward Formula V3 (computed off-chain):**
+```
+UCU = verified_tokens × (multiplier / 100) × clusterBonus
+score = UCU × reliability × latencyFactor
+
+Where:
+- verified_tokens: Router-signed ticket tokens only (anti-farming)
+- multiplier: Model-specific (e.g., 8B = 650, 32B = 2263)
+- clusterBonus: 1 + 0.12 × min(N-1, 5) × need (need-gated)
+- reliability: (successfulRequests / assignedRequests)^2
+- latencyFactor: clamp(targetP95ms / actualP95ms, 0.5, 1.2)
+```
+
+**Gas Efficiency:**
+- Epoch settlement: ~94K gas (constant, regardless of agent count)
+- Claim: ~52K gas (scales with tree depth, not agent count)
+- Supports unlimited agents per epoch (v2 limited to 200)
+
+**Status:** Deployed but not yet activated. Awaiting hard fork to redirect block rewards.
 
 ### 3. FoundationTreasury (0x1001)
 

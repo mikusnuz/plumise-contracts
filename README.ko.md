@@ -30,9 +30,9 @@ AI 에이전트를 등록하고 관리하는 레지스트리 컨트랙트입니�
 - `INACTIVE` - 비활성 (heartbeat 타임아웃)
 - `SLASHED` - 슬래싱됨
 
-### 2. RewardPool
+### 2. RewardPool (v2)
 
-에이전트들에게 블록 보상을 분배하는 풀 컨트랙트입니다.
+에이전트들에게 블록 보상을 분배하는 풀 컨트랙트입니다. 가산 방식의 점수 공식을 사용합니다.
 
 **주요 기능:**
 - `syncRewards()` - 블록 보상 동기화 (`state.AddBalance` 반영)
@@ -45,6 +45,47 @@ AI 에이전트를 등록하고 관리하는 레지스트리 컨트랙트입니�
 - Epoch: 1,200 블록 (약 1시간, 3초 블록 기준)
 - 기여도 점수: `taskCount * taskWeight + uptimeSeconds * uptimeWeight + responseScore * responseWeight`
 - 블록 보상은 Geth의 `state.AddBalance()`로 추가되며, `syncRewards()`를 통해 추적
+
+**상태:** 활성. 향후 하드포크에서 RewardPool v3로 대체 예정.
+
+### 2.1. RewardPoolV3
+
+Merkle 클레임 기반의 차세대 보상 분배 시스템. 다중 모델 지원 및 클러스터 인센티브 제공.
+
+**주요 기능:**
+- `setModel(bytes32 modelHash, uint256 multiplier)` - 모델 멀티플라이어 등록/갱신 (Oracle)
+- `deactivateModel(bytes32 modelHash)` - 모델 비활성화 (Oracle)
+- `submitEpoch(uint256 epochId, bytes32 merkleRoot, uint256 totalReward)` - Epoch 정산 제출 (Oracle)
+- `claim(uint256 epochId, uint256 amount, bytes32[] proof)` - Merkle 증명으로 보상 청구
+- `claimFor(address agent, uint256 epochId, uint256 amount, bytes32[] proof)` - 대리 청구
+- `setClusterParams(uint256 perNode, uint256 maxBonus)` - 클러스터 보너스 파라미터 조정 (Oracle)
+
+**아키텍처:**
+- **Merkle Claim**: Oracle이 오프체인에서 보상 계산 후 Merkle root 제출 (O(1) 가스)
+- **개별 청구**: 각 에이전트가 증명과 함께 청구 (O(log N) 가스)
+- **분쟁 기간**: 청구 활성화 전 200블록 (~10분) 대기
+- **모델 레지스트리**: 파라미터 수 기반 동적 멀티플라이어
+- **클러스터 지원**: 분산 추론 클러스터를 위한 필요성 기반 보너스
+
+**보상 공식 V3 (오프체인 계산):**
+```
+UCU = verified_tokens × (multiplier / 100) × clusterBonus
+score = UCU × reliability × latencyFactor
+
+여기서:
+- verified_tokens: Router 서명 티켓 토큰만 (자가 채굴 방지)
+- multiplier: 모델별 (예: 8B = 650, 32B = 2263)
+- clusterBonus: 1 + 0.12 × min(N-1, 5) × need (필요성 기반)
+- reliability: (successfulRequests / assignedRequests)^2
+- latencyFactor: clamp(targetP95ms / actualP95ms, 0.5, 1.2)
+```
+
+**가스 효율:**
+- Epoch 정산: ~94K gas (에이전트 수와 무관한 상수)
+- 청구: ~52K gas (트리 깊이에 비례, 에이전트 수와 무관)
+- Epoch당 무제한 에이전트 지원 (v2는 200명 제한)
+
+**상태:** 배포 완료, 아직 미활성화. 블록 보상 리다이렉션 하드포크 대기 중.
 
 ### 3. FoundationTreasury (0x1001)
 
