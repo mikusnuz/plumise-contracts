@@ -58,10 +58,10 @@ contract RewardPoolV3 is ReentrancyGuard {
 
     /// @notice Epoch settlement data
     struct EpochSettlement {
-        bytes32 merkleRoot;  // Merkle root of (agent, epochId, amount) leaves
+        bytes32 merkleRoot; // Merkle root of (agent, epochId, amount) leaves
         uint256 totalReward; // Total reward for this epoch
-        uint256 settledAt;   // Block number when submitted
-        bool finalized;      // Reserved for future dispute resolution
+        uint256 settledAt; // Block number when submitted
+        bool finalized; // Reserved for future dispute resolution
     }
 
     /// @notice Epoch settlements: epochId => EpochSettlement
@@ -185,10 +185,7 @@ contract RewardPoolV3 is ReentrancyGuard {
         _syncRewards();
 
         epochs[epochId] = EpochSettlement({
-            merkleRoot: merkleRoot,
-            totalReward: totalReward,
-            settledAt: block.number,
-            finalized: false
+            merkleRoot: merkleRoot, totalReward: totalReward, settledAt: block.number, finalized: false
         });
 
         emit EpochSubmitted(epochId, merkleRoot, totalReward);
@@ -214,10 +211,7 @@ contract RewardPoolV3 is ReentrancyGuard {
      * @dev Enables sponsored claiming via precompile 0x23 or other authorized contracts
      *      Leaf = keccak256(abi.encodePacked(agent, epochId, amount))
      */
-    function claimFor(address agent, uint256 epochId, uint256 amount, bytes32[] calldata proof)
-        external
-        nonReentrant
-    {
+    function claimFor(address agent, uint256 epochId, uint256 amount, bytes32[] calldata proof) external nonReentrant {
         _claim(agent, epochId, amount, proof);
     }
 
